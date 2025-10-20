@@ -27,13 +27,13 @@
 		
 -------------------------------Addon Commands---------------------------------------------
 
- 1) //ez buffid   | Returns current players buffs and their associated IDss
+ 1) //ez buffid   | Returns current players buffs and their associated IDs to chat
  2) //ez buff     | WIP
- 3) //ez mount    | Mount/Dismount with a single hotkey (default key: CTRL + NUMPAD9)
- 3) //ez cure     | Heals the lowest health target 
- 4) //ez unlock   | Allows party hud to be moved with the mouse
- 5) //ez lock     | Locks the party Hud from being dragged. It also saves its location in data/settings.xml
- 6) //ez reset    | Resets the location of the party hud to x = 100, y = 100
+ 3) //ez mount    | Mount/Dismount with a single hotkey (if bind is enabled then default key: CTRL + NUMPAD9)
+ 3) //ez cure     | Heals the lowest health target  (if bind is enabled then default key: NUMPAD5)
+ 4) //ez unlock   | 
+ 5) //ez lock     | 
+ 6) //ez reset    | 
  
  -------------------------------Addon Settings----------------------------------------------]]
 
@@ -50,25 +50,36 @@ texts  = require('texts')
 images = require('images')
 ezparty = require('EZParty')
 ezcure = require('EZCure')
+ezfunctions = require('EZFunctions')
 
-
-local addon_settings = config.load(defaults)
-config.save(addon_settings)
-
----------------------------------Addon Binds------------------------------------------------]]
-
-windower.send_command('bind '..addon_settings.ezmount.bind..' input //ez mount')
-
---------------------------------------------------------------------------------------------]]
-
-
--- Initialize
+-- Initialize Addon
 local screen_width = windower.get_windower_settings().ui_x_res
 local screen_height = windower.get_windower_settings().ui_y_res
-ezparty.init()
+local defaults = ezfunctions.create_defaults()
+local addon_settings = config.load(defaults) -- only will load defaults if data/settings.xml doesn't exist
+config.save(addon_settings)                  -- This is here to create the data/settings.xml with the defaults if it doesn't exist, if it does exist it will just re-save existing settings
 
--- Frame Update - We draw shit every frame because we can
+-- EZ Party Create GUI
+if addon_settings.ezparty.enabled == true then
+	ezparty.init()
+end
+
+---------------------------------Set Binds------------------------------------------------]]
+
+-- EZ Mount Bind
+if addon_settings.ezmount.enable_bind == true then
+	windower.send_command('bind '.. addon_settings.ezmount.bind .. ' input //ez mount')
+end
+
+-- EZ Cure Bind
+if addon_settings.ezcure.enable_bind == true then
+	windower.send_command('bind '.. addon_settings.ezcure.bind .. ' input //ez cure')
+end
+
+-----------------------------PreRender Frame Loop-----------------------------------------]]
+
 windower.register_event('prerender', function()
+
 	local party = windower.ffxi.get_party()
     local hp_tbl = ezparty.player_hp
     local mp_tbl = ezparty.player_mp
@@ -106,20 +117,6 @@ windower.register_event('prerender', function()
     end
 end) 
 
----------------V--Functions--V--------------------------
-
--- Check if player has buff ID
-local function has_buff(buff_id)
-	player = windower.ffxi.get_player()
-	
-    for _, id in ipairs(player.buffs or {}) do
-        if id == buff_id then
-            return true
-        end
-    end
-    return false
-end
-
 -----------------Addon Commands---------------------------
 
 windower.register_event('addon command', function(command)
@@ -128,13 +125,13 @@ windower.register_event('addon command', function(command)
 	local player = windower.ffxi.get_player() 
 
 	-- EZ Buff IDs
-	if command:lower() == 'buffid' and player.main_job_id == 5 then
+	if command:lower() == 'buffid' then
 		windower.add_to_chat(108, "Buff ID's: "..table.concat(player.buffs, ", "))
 	end
 	
 	-- EZ Mount
 	if command:lower() == 'mount' then
-		if has_buff(252) == false then
+		if ezfunctions.has_buff(252) == false then
 			windower.send_command('input /mount '..addon_settings.ezmount.name)
 		else
 			windower.send_command('input /dismount')
@@ -146,4 +143,3 @@ windower.register_event('addon command', function(command)
 		ezcure.auto_cure(addon_settings)
 	end
 end)
-		
