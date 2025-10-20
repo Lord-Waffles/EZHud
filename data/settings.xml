@@ -1,0 +1,27 @@
+<?xml version="1.1" ?>
+<settings>
+    <global>
+        <ezmount>
+            <bind>^numpad9</bind>
+            <name>tiger</name>
+        </ezmount>
+        <ezparty>
+            <hud>
+                <draggable>false</draggable>
+                <scale>0.8</scale>
+                <x_pos>100</x_pos>
+                <y_pos>100</y_pos>
+            </hud>
+        </ezparty>
+        <hud>
+            <x_p>0.79238387883285</x_p>
+            <y_p>0.6501615364054</y_p>
+        </hud>
+        <settings>
+            <size>
+                <height>75</height>
+                <width>500</width>
+            </size>
+        </settings>
+    </global>
+</settings>
