@@ -80,44 +80,66 @@ end
 
 windower.register_event('prerender', function()
 
-	local party = windower.ffxi.get_party()
-    local hp_tbl = ezparty.player_hp
-    local mp_tbl = ezparty.player_mp
-    local tp_tbl = ezparty.player_tp
-    local hud_scale = ezparty.hud_scale or 1.0
-	local player_panel = ezparty.player_panel
-
-    if not (hp_tbl and mp_tbl and tp_tbl) then
-        return
-    end
-	
-	
-
-    for i = 0, 5 do
-        local member = party['p'..i - 1]
-        if member and member.name then
-			-- Enable Player health bars and panel
-			player_panel[i]:show()
-			hp_tbl[i]:show()
-			mp_tbl[i]:show()
-			tp_tbl[i]:show()
-            local hp = member.hpp or 0
-            local mp = member.mpp or 0
-            local tp = member.tp or 0
-
-            if hp_tbl[i] then hp_tbl[i]:size((119 * hud_scale) * (hp / 100), 9 * hud_scale) end
-            if mp_tbl[i] then mp_tbl[i]:size((119 * hud_scale) * (mp / 100), 9 * hud_scale) end
-            if tp_tbl[i] then tp_tbl[i]:size((119 * hud_scale) * (math.min(tp, 1000) / 1000), 9 * hud_scale) end
-		else
-			player_panel[i]:hide()
-			hp_tbl[i]:hide()
-			mp_tbl[i]:hide()
-			tp_tbl[i]:hide()
+        local party = windower.ffxi.get_party()
+        if not party then -- Not sure if get_party is = nil during loading screens/cutscenes or any other time... but if it is nil it probably isn't a good time to load the GUI
+                return
         end
-    end
-end) 
+		
+		-- Set Variables
+		
+        local hp_tbl = ezparty.player_hp
+        local mp_tbl = ezparty.player_mp
+        local tp_tbl = ezparty.player_tp
+        local player_panel = ezparty.player_panel
+        local hp_size = ezparty.hp_size or { width = 0, height = 0 }
+        local mp_size = ezparty.mp_size or { width = 0, height = 0 }
+        local tp_size = ezparty.tp_size or { width = 0, height = 0 }
 
------------------Addon Commands---------------------------
+        if not (hp_tbl and mp_tbl and tp_tbl and player_panel) then
+                return
+        end
+
+
+
+        for i = 0, 5 do
+                local member = party['p'..i]
+                local panel = player_panel[i]
+                local hp_image = hp_tbl[i]
+                local mp_image = mp_tbl[i]
+                local tp_image = tp_tbl[i]
+
+                if member and member.name then
+				
+                        -- Enable Player health bars and panel
+                        if panel then panel:show() end
+                        if hp_image then hp_image:show() end
+                        if mp_image then mp_image:show() end
+                        if tp_image then tp_image:show() end
+
+                        local hp = member.hpp or 0
+                        local mp = member.mpp or 0
+                        local tp = member.tp or 0
+
+                        if hp_image then
+                                hp_image:size((hp_size.width or 0) * (hp / 100), hp_size.height or 0)
+                        end
+                        if mp_image then
+                                mp_image:size((mp_size.width or 0) * (mp / 100), mp_size.height or 0)
+                        end
+                        if tp_image then
+                                tp_image:size((tp_size.width or 0) * (math.min(tp, 1000) / 1000), tp_size.height or 0)
+                        end
+                else
+						-- Hide panels if no party member exists
+                        if panel then panel:hide() end
+                        if hp_image then hp_image:hide() end
+                        if mp_image then mp_image:hide() end
+                        if tp_image then tp_image:hide() end
+                end
+        end
+end)
+
+---------------------------Addon Commands-------------------------------------------------]]
 
 windower.register_event('addon command', function(command)
 

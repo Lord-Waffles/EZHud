@@ -29,172 +29,196 @@
 local config = require('config')
 local texts  = require('texts')
 
------------------------------------------------------------------------------------------- 
+-----------------------------------------Init-------------------------------------------------]] 
 local addon_settings = config.load()
-local hud_scale = addon_settings.ezparty.hud.scale
+local hud_scale = tonumber(addon_settings.ezparty.hud.scale) or 1
 local ezparty = {}
 local screen_width = windower.get_windower_settings().ui_x_res
 local screen_height = windower.get_windower_settings().ui_y_res
-local player_frame = {} 
+local player_frame = {}
 local player_panel = {}
-local slot_occupancy = {} 
+local slot_occupancy = {}
 local player_hp = {}
 local player_mp = {}
 local player_tp = {}
-local current = {}
-
--- Generate slot position table accounting for hud_scale
 local slot_position = {}
-for i = 0, 5 do
-	if i == 0 then
-		current = { x = screen_width - (addon_settings.ezparty.hud.player_frame.size.x * hud_scale) , y = screen_height - ((addon_settings.ezparty.hud.player_frame.size.y * 6) * hud_scale) }
-		slot_position[i] = { x = current.x, y = current.y }
-	else
-		current.y = current.y + addon_settings.ezparty.hud.player_frame.size.y
-		slot_position[i] = { x = current.x , y = current.y }
-	end
+local frame_size = { width = 0, height = 0 }
+local panel_size = { width = 0, height = 0 }
+local hp_size = { width = 0, height = 0 }
+local mp_size = { width = 0, height = 0 }
+local tp_size = { width = 0, height = 0 }
+
+local function scale_value(value, scale)
+        return (tonumber(value) or 0) * scale
+end
+
+local function scaled_size(size, scale)
+        size = size or {}
+
+        return {
+                width = scale_value(size.x, scale),
+                height = scale_value(size.y, scale),
+        }
+end
+
+local function scaled_offset(offset, scale)
+        offset = offset or {}
+
+        return {
+                x = scale_value(offset.x, scale),
+                y = scale_value(offset.y, scale),
+        }
 end
 
 function ezparty.init()
-	
-	local frame = addon_settings.ezparty.hud.player_frame
-	local panel = addon_settings.ezparty.hud.player_panel
-	local hp = addon_settings.ezparty.hud.hp
-	local mp = addon_settings.ezparty.hud.mp
-	local tp = addon_settings.ezparty.hud.tp
-	
-	-- Set Path 
-	frame.path = windower.addon_path .. addon_settings.ezparty.hud.player_frame.texture_path
-	panel.path = windower.addon_path .. addon_settings.ezparty.hud.player_panel.texture_path
-	hp.path = windower.addon_path .. addon_settings.ezparty.hud.hp.texture_path
-	mp.path = windower.addon_path .. addon_settings.ezparty.hud.mp.texture_path
-	tp.path = windower.addon_path .. addon_settings.ezparty.hud.tp.texture_path
-	
-	-- Set Scale frame
-	frame.size.x = tonumber(frame.size.x)* hud_scale 
-	frame.size.y = tonumber(frame.size.y) * hud_scale 
-	
-	-- Set Scale Panel
-	panel.offset.x = tonumber(panel.offset.x) * hud_scale 
-	panel.offset.y = tonumber(panel.offset.y)* hud_scale 
-	panel.size.x = tonumber(panel.size.x)* hud_scale 
-	panel.size.y = tonumber(panel.size.y) * hud_scale 
-	
-	-- Set Scale HP
-	panel.offset.x = tonumber(panel.offset.x) * hud_scale 
-	panel.offset.y = tonumber(panel.offset.y)* hud_scale 
-	panel.size.x = tonumber(panel.size.x)* hud_scale 
-	panel.size.y = tonumber(panel.size.y) * hud_scale 
-	
-	-- Set Scale MP
-	mp.offset.x = tonumber(mp.offset.x) * hud_scale 
-	mp.offset.y = tonumber(mp.offset.y)* hud_scale 
-	mp.size.x = tonumber(mp.size.x)* hud_scale 
-	mp.size.y = tonumber(mp.size.y) * hud_scale 
-	
-	-- Set Scale TP
-	tp.offset.x = tonumber(tp.offset.x) * hud_scale 
-	tp.offset.y = tonumber(tp.offset.y)* hud_scale 
-	tp.size.x = tonumber(tp.size.x)* hud_scale 
-	tp.size.y = tonumber(tp.size.y) * hud_scale 
-	
-	for i = 0, 5 do
-	    local party = windower.ffxi.get_party()
-		
-		player_frame[i] = images.new{
-			pos = {x = slot_position[i].x  , y = slot_position[i].y } ,
-			visible = true,
-			color = {alpha = 255, red = 255, green = 255, blue = 255},
-			size = { x = frame.size.x , y = frame.size.y } ,
-			texture = {path = frame.path, fit = false},
-			repeatable = {x = 1, y = 1},
-			draggable = false,
-			layer = 1,
-		}
-		windower.add_to_chat(108, 'debug: ' .. slot_position[i].x)
-		-- Store the scaled size because why not. There is a bug and IDK WHAT IS GOING ON BUT FUCK PLEASE
-		
-		player_frame[i].scaled_size = frame.size
-		
-		player_panel[i] = images.new{
-			pos = { x = slot_position[i].x + panel.offset.x , y = slot_position[i].y + panel.offset.y } ,
-			visible = true,
-			color = {alpha = 255, red = 255, green = 255, blue = 255},
-			size = { x = panel.size.x , y = panel.size.y } ,
-			texture = {path = panel.path , fit = false},
-			repeatable = {x = 1, y = 1},
-			draggable = true,
-			layer = 2,
-			group = i,
-		}	
-		
-		player_panel[i].scaled_size = panel.size
-		
-		player_hp[i] = images.new{
-			pos = {x = slot_position[i].x + hp.offset.x , y = slot_position[i].y + hp.offset.y},
-			visible = true,
-			color = {alpha = 255, red = 255, green = 255, blue = 255},
-			size  = hp.size,
-			texture = {path = hp.path , fit = false},
-			repeatable = {x = 1, y = 1},
-			draggable = false,
-			layer = 3,
-			group = i,
-		}
-		
-		player_hp[i].scaled_size = hp.size
-		
-		player_mp[i] = images.new{
-			pos = {x = slot_position[i].x + mp.offset.x , y = slot_position[i].y + mp.offset.y},
-			visible = true,
-			color = {alpha = 255, red = 255, green = 255, blue = 255},
-			size  = mp.size,
-			texture = {path = mp.path , fit = false},
-			repeatable = {x = 1, y = 1},
-			draggable = false,
-			layer = 3,
-			group = i,
-		}
-		
-		player_mp[i].scaled_size = mp.size
-		
-		player_tp[i] = images.new{
-			pos = {x = slot_position[i].x + tp.offset.x , y = slot_position[i].y + tp.offset.y},
-			visible = true,
-			color = {alpha = 255, red = 255, green = 255, blue = 255},
-			size  = tp.size,
-			texture = {path = tp.path , fit = false},
-			repeatable = {x = 1, y = 1},
-			draggable = false,
-			layer = 3,
-			group = i,
-		}
-		
-		player_tp[i].scaled_size = tp.size
-		
-		player_frame.index = i -- Do i even use this anymore?
-		slot_occupancy[i] = player_frame[i]
-		player_frame[i]:show()
-		panel.offset.y = panel.offset.y + ( addon_settings.ezparty.hud.player_panel.size.y * hud_scale )
-		hp.offset.y = hp.offset.y + ( addon_settings.ezparty.hud.hp.size.y * hud_scale )
-		mp.offset.y = mp.offset.y + ( addon_settings.ezparty.hud.mp.size.y * hud_scale )
-		tp.offset.y = tp.offset.y + ( addon_settings.ezparty.hud.tp.size.y * hud_scale )
-	
-	end
-	
-	-- This is important - NOTE TO SELF: Stop forgetting to expose tables | So many NILs were had because of this
-	-- This is where we export VVVVVVVVVVVVVVVVVVVVVVVVVVVVV down there. Stop. Forgetting.
-	ezparty.slot_position = slot_position
-	ezparty.hud_scale     = hud_scale
-	ezparty.player_frame  = player_frame
-	ezparty.player_panel  = player_panel
-	ezparty.player_hp     = player_hp
-	ezparty.player_mp     = player_mp
-	ezparty.player_tp     = player_tp
+        addon_settings = config.load()
+
+        local hud = addon_settings.ezparty and addon_settings.ezparty.hud or {}
+
+        hud_scale = tonumber(hud.scale) or 1
+
+        local frame = hud.player_frame or {}
+        local panel = hud.player_panel or {}
+        local hp = hud.hp or {}
+        local mp = hud.mp or {}
+        local tp = hud.tp or {}
+
+        local frame_texture = windower.addon_path .. (frame.texture_path or '')
+        local panel_texture = windower.addon_path .. (panel.texture_path or '')
+        local hp_texture = windower.addon_path .. (hp.texture_path or '')
+        local mp_texture = windower.addon_path .. (mp.texture_path or '')
+        local tp_texture = windower.addon_path .. (tp.texture_path or '')
+
+        frame_size = scaled_size(frame.size, hud_scale)
+        panel_size = scaled_size(panel.size, hud_scale)
+        hp_size = scaled_size(hp.size, hud_scale)
+        mp_size = scaled_size(mp.size, hud_scale)
+        tp_size = scaled_size(tp.size, hud_scale)
+
+        local panel_offset = scaled_offset(panel.offset, hud_scale)
+        local hp_offset = scaled_offset(hp.offset, hud_scale)
+        local mp_offset = scaled_offset(mp.offset, hud_scale)
+        local tp_offset = scaled_offset(tp.offset, hud_scale)
+
+        slot_position = {}
+        local frame_width = frame_size.width
+        local frame_height = frame_size.height
+        local base_x = screen_width - frame_width
+        local base_y = screen_height - (frame_height * 6)
+
+        for i = 0, 5 do
+                slot_position[i] = {
+                        x = base_x,
+                        y = base_y + (frame_height * i),
+                }
+
+                player_frame[i] = images.new{
+                        pos = { x = slot_position[i].x, y = slot_position[i].y },
+                        visible = true,
+                        color = { alpha = 255, red = 255, green = 255, blue = 255 },
+                        size = { width = frame_size.width, height = frame_size.height },
+                        texture = { path = frame_texture, fit = false },
+                        repeatable = { x = 1, y = 1 },
+                        draggable = false,
+                        layer = 1,
+                }
+                player_frame[i].scaled_size = { width = frame_size.width, height = frame_size.height }
+
+                player_panel[i] = images.new{
+					pos = {
+						x = slot_position[i].x + panel_offset.x,
+						y = slot_position[i].y + panel_offset.y,
+					},
+					visible = true,
+					color = { alpha = 255, red = 255, green = 255, blue = 255 },
+					size = { width = panel_size.width, height = panel_size.height },
+					texture = { path = panel_texture, fit = false },
+					repeatable = { x = 1, y = 1 },
+					draggable = true,
+					layer = 2,
+					group = i,
+                }
+                player_panel[i].scaled_size = { width = panel_size.width, height = panel_size.height }
+
+                player_hp[i] = images.new{
+					pos = {
+						x = slot_position[i].x + hp_offset.x,
+						y = slot_position[i].y + hp_offset.y,
+					},
+					visible = true,
+					color = { alpha = 255, red = 255, green = 255, blue = 255 },
+					size = { width = hp_size.width, height = hp_size.height },
+					texture = { path = hp_texture, fit = false },
+					repeatable = { x = 1, y = 1 },
+					draggable = false,
+					layer = 3,
+					group = i,
+                }
+                player_hp[i].scaled_size = { width = hp_size.width, height = hp_size.height }
+
+                player_mp[i] = images.new{
+					pos = {
+						x = slot_position[i].x + mp_offset.x,
+						y = slot_position[i].y + mp_offset.y,
+					},
+					visible = true,
+					color = { alpha = 255, red = 255, green = 255, blue = 255 },
+					size = { width = mp_size.width, height = mp_size.height },
+					texture = { path = mp_texture, fit = false },
+					repeatable = { x = 1, y = 1 },
+					draggable = false,
+					layer = 3,
+					group = i,
+                }
+                player_mp[i].scaled_size = { width = mp_size.width, height = mp_size.height }
+
+                player_tp[i] = images.new{
+					pos = {
+						x = slot_position[i].x + tp_offset.x,
+						y = slot_position[i].y + tp_offset.y,
+					},
+					visible = true,
+					color = { alpha = 255, red = 255, green = 255, blue = 255 },
+					size = { width = tp_size.width, height = tp_size.height },
+					texture = { path = tp_texture, fit = false },
+					repeatable = { x = 1, y = 1 },
+					draggable = false,
+					layer = 3,
+					group = i,
+                }
+                player_tp[i].scaled_size = { width = tp_size.width, height = tp_size.height }
+
+                player_frame.index = i
+                slot_occupancy[i] = player_frame[i]
+                player_frame[i]:show()
+        end
+
+        ezparty.slot_position = slot_position
+        ezparty.hud_scale = hud_scale
+        ezparty.player_frame = player_frame
+        ezparty.player_panel = player_panel
+        ezparty.player_hp = player_hp
+        ezparty.player_mp = player_mp
+        ezparty.player_tp = player_tp
+        ezparty.frame_size = frame_size
+        ezparty.panel_size = panel_size
+        ezparty.hp_size = hp_size
+        ezparty.mp_size = mp_size
+        ezparty.tp_size = tp_size
 end
 
+-- Not certain if this is needed - but just incase we will expose it again outside the loop
 ezparty.slot_position = slot_position
 ezparty.hud_scale = hud_scale
 ezparty.player_frame = player_frame
+ezparty.player_panel = player_panel
+ezparty.player_hp = player_hp
+ezparty.player_mp = player_mp
+ezparty.player_tp = player_tp
+ezparty.frame_size = frame_size
+ezparty.panel_size = panel_size
+ezparty.hp_size = hp_size
+ezparty.mp_size = mp_size
+ezparty.tp_size = tp_size
 
 return ezparty
