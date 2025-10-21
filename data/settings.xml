@@ -1,27 +1,81 @@
 <?xml version="1.1" ?>
 <settings>
     <global>
-        <ezmount>
-            <bind>^numpad9</bind>
-            <name>tiger</name>
-        </ezmount>
         <ezparty>
+            <enabled>true</enabled>
             <hud>
+                <enabled>true</enabled>
+                <scale>1</scale>
                 <draggable>false</draggable>
-                <scale>0.8</scale>
-                <x_pos>100</x_pos>
-                <y_pos>100</y_pos>
+                <x_pos>screen_width - 500</x_pos>
+                <y_pos>screen_height - (75 * 6)</y_pos>
+                <player_frame>
+                    <size>
+                        <x>500</x>
+                        <y>75</y>
+                    </size>
+                    <offset>
+                        <x>0</x>
+                        <y>0</y>
+                    </offset>
+                    <texture_path>gui/player_frame_bg.png</texture_path>
+                </player_frame>
+                <player_panel>
+                    <size>
+                        <x>460</x>
+                        <y>47</y>
+                    </size>
+                    <offset>
+                        <x>25</x>
+                        <y>2</y>
+                    </offset>
+                    <texture_path>gui/player_panel_bg.png</texture_path>
+                </player_panel>
+                <hp>
+                    <size>
+                        <x>119</x>
+                        <y>9</y>
+                    </size>
+                    <offset>
+                        <x>57</x>
+                        <y>27</y>
+                    </offset>
+                    <texture_path>gui/hp_bar.png</texture_path>
+                </hp>
+                <mp>
+                    <size>
+                        <x>119</x>
+                        <y>9</y>
+                    </size>
+                    <offset>
+                        <x>206</x>
+                        <y>27</y>
+                    </offset>
+                    <texture_path>gui/mp_bar.png</texture_path>
+                </mp>
+                <tp>
+                    <size>
+                        <x>119</x>
+                        <y>9</y>
+                    </size>
+                    <offset>
+                        <x>355</x>
+                        <y>27</y>
+                    </offset>
+                    <texture_path>gui/tp_bar.png</texture_path>
+                </tp>
             </hud>
         </ezparty>
-        <hud>
-            <x_p>0.79238387883285</x_p>
-            <y_p>0.6501615364054</y_p>
-        </hud>
-        <settings>
-            <size>
-                <height>75</height>
-                <width>500</width>
-            </size>
-        </settings>
+
+        <ezmount>
+            <bind>^numpad9</bind>
+            <name>raptor</name>
+            <enable_bind>false</enable_bind>
+        </ezmount>
+
+        <ezcure>
+            <enable_bind>false</enable_bind>
+            <bind>numpad5</bind>
+        </ezcure>
     </global>
 </settings>
