@@ -45,19 +45,19 @@ _addon.command = 'ez'
 _addon.language = 'english'
 
 -- Libraries
-config = require('config')
-texts  = require('texts')
-images = require('images')
-ezparty = require('EZParty')
-ezcure = require('EZCure')
-ezfunctions = require('EZFunctions')
+local config = require('config')
+local texts  = require('texts')
+local images = require('images')
+local ezparty = require('EZParty')
+local ezcure = require('EZCure')
+local ezfunctions = require('EZFunctions')
 
 -- Initialize Addon
 local screen_width = windower.get_windower_settings().ui_x_res
 local screen_height = windower.get_windower_settings().ui_y_res
-local defaults = ezfunctions.create_defaults()
-local addon_settings = config.load(defaults) -- only will load defaults if data/settings.xml doesn't exist
-config.save(addon_settings)                  -- This is here to create the data/settings.xml with the defaults if it doesn't exist, if it does exist it will just re-save existing settings
+local defaults = {}
+addon_settings = config.load(defaults) -- only will load defaults if data/settings.xml doesn't exist
+--addon_settings:save()                 -- This is here to create the data/settings.xml with the defaults if it doesn't exist, if it does exist it will just re-save existing settings
 
 -- EZ Party Create GUI
 if addon_settings.ezparty.enabled == true then
@@ -93,7 +93,7 @@ windower.register_event('prerender', function()
 	
 	
 
-    for i = 1, 6 do
+    for i = 0, 5 do
         local member = party['p'..i - 1]
         if member and member.name then
 			-- Enable Player health bars and panel

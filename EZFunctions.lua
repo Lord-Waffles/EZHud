@@ -31,58 +31,86 @@
 config = require('config')
 texts  = require('texts')
 images = require('images')
+require('resources')
 
 local ezfunctions = {}
 
 -- Default settings for creating settings.xml on first load
-local function ezfunctions.create_defaults(settings)
-	
-	-- EZ Party
-	settings.ezparty.hud.enabled = true
-	settings.ezparty.hud.scale = 1
-	settings.ezparty.hud.draggable = false
-	settings.ezparty.hud.player_frame = {
-		size = { x = 500 , y = 75 } ,
-		path =  windower.addon_path .. 'gui/player_frame_bg.png' ,	
-	}
-	settings.ezparty.hud.x_pos = windower.get_settings().ui_res_x - settings.ezparty.hud.player_frame.x 
-	settings.ezparty.hud.y_pos = windower.get_settings().ui_res_y - (settings.ezparty.hud.player_frame.y * 6) 
-	settings.ezparty.hud.player_panel = {
-		size = { x = 500 , y = 75 },
-		path = windower.addon_path .. 'gui/player_panel_bg.png' ,
-		offset = { x = 25 , y = 25  }
-	}
-	settings.ezparty.hud.hp = {
-		size = { x = 119 , y = 9 },
-		path = windower.addon_path .. 'gui/hp_bar.png',
-		offset = { x = 57 , y = 27 }
-	}
-	settings.ezparty.hud.mp = {
-		size = { x = 119 , y = 9 },
-		path = windower.addon_path .. 'gui/mp_bar.png',
-		offset = { x = 206 , y = 27 }
-	}
-	settings.ezparty.hud.tp = {
-		size = { x = 119 , y = 9 },
-		path = windower.addon_path .. 'gui/tp_bar.png',
-		offset = { x = 355 , y = 27 }
-	}
-	
-	-- EZ Mount
-	settings.ezmount.bind = '^numpad9'
-	settings.ezmount.name = 'raptor'
-	settings.ezmount.enable_bind = false
-	
-	-- EZ Cure
-	settings.ezcure.enable_bind = false
-	settings.ezcure.bind = 'numpad5'
-	
-	return settings
-	
+function ezfunctions.create_defaults(settings)
+        settings = settings or {}
+
+        -- EZ Party
+        settings.ezparty = settings.ezparty or {}
+        settings.ezparty.enabled = settings.ezparty.enabled ~= false
+
+        local hud = settings.ezparty.hud or {}
+        settings.ezparty.hud = hud
+        hud.enabled = hud.enabled ~= false
+        hud.scale = hud.scale or 1
+        hud.draggable = hud.draggable or false
+
+        hud.player_frame = hud.player_frame or {
+                size = { x = 500 , y = 75 },
+                offset = { x = 0 , y = 0 },
+                path =  windower.addon_path .. 'gui/player_frame_bg.png',
+        }
+        hud.player_frame.size = hud.player_frame.size or { x = 500 , y = 75 }
+        hud.player_frame.offset = hud.player_frame.offset or { x = 0 , y = 0 }
+        hud.player_frame.x = hud.player_frame.x or hud.player_frame.size.x
+        hud.player_frame.y = hud.player_frame.y or hud.player_frame.size.y
+
+        --hud.x_pos = windower.get_settings().ui_res_x - hud.player_frame.size.x
+        --hud.y_pos = windower.get_settings().ui_rez_y - (hud.player_frame.size.y * 6)
+
+        hud.player_panel = hud.player_panel or {
+                size = { x = 500 , y = 75 },
+                path = windower.addon_path .. 'gui/player_panel_bg.png',
+                offset = { x = 25 , y = 25 }
+        }
+        hud.player_panel.size = hud.player_panel.size or { x = 500 , y = 75 }
+        hud.player_panel.offset = hud.player_panel.offset or { x = 25 , y = 25 }
+
+        hud.hp = hud.hp or {
+                size = { x = 119 , y = 9 },
+                path = windower.addon_path .. 'gui/hp_bar.png',
+                offset = { x = 57 , y = 27 }
+        }
+        hud.hp.size = hud.hp.size or { x = 119 , y = 9 }
+        hud.hp.offset = hud.hp.offset or { x = 57 , y = 27 }
+
+        hud.mp = hud.mp or {
+                size = { x = 119 , y = 9 },
+                path = windower.addon_path .. 'gui/mp_bar.png',
+                offset = { x = 206 , y = 27 }
+        }
+        hud.mp.size = hud.mp.size or { x = 119 , y = 9 }
+        hud.mp.offset = hud.mp.offset or { x = 206 , y = 27 }
+
+        hud.tp = hud.tp or {
+                size = { x = 119 , y = 9 },
+                path = windower.addon_path .. 'gui/tp_bar.png',
+                offset = { x = 355 , y = 27 }
+        }
+        hud.tp.size = hud.tp.size or { x = 119 , y = 9 }
+        hud.tp.offset = hud.tp.offset or { x = 355 , y = 27 }
+
+        -- EZ Mount
+        settings.ezmount = settings.ezmount or {}
+        settings.ezmount.bind = settings.ezmount.bind or '^numpad9'
+        settings.ezmount.name = settings.ezmount.name or 'raptor'
+        settings.ezmount.enable_bind = settings.ezmount.enable_bind or false
+
+        -- EZ Cure
+        settings.ezcure = settings.ezcure or {}
+        settings.ezcure.enable_bind = settings.ezcure.enable_bind or false
+        settings.ezcure.bind = settings.ezcure.bind or 'numpad5'
+
+        return settings
+
 end
 
 -- Check for a specific buff ID & return boolean
-local function ezfunctions.has_buff(buff_id)
+function ezfunctions.has_buff(buff_id)
 	local player = windower.ffxi.get_player()
 	
     for _, id in ipairs(player.buffs or {}) do
