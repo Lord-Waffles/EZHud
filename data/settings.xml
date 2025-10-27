@@ -45,40 +45,96 @@
             </buffs>
             <enable>true</enable>
             <layout>
-                <draggable>true</draggable>
-                <vertical_spacing>50</vertical_spacing>
+                <draggable>false</draggable>
+                <vertical_spacing>32</vertical_spacing>
             </layout>
             <member_frame>
+                <color>
+                    <alpha>255</alpha>
+                    <blue>255</blue>
+                    <green>255</green>
+                    <red>255</red>
+                </color>
+                <draggable>false</draggable>
                 <enable>true</enable>
-                <image>gui/ezparty/member_frame.png</image>
                 <linked>true</linked>
-                <offset>
+                <pos>
                     <x>0</x>
                     <y>0</y>
-                </offset>
+                </pos>
+                <repeatable>
+                    <x>1</x>
+                    <y>1</y>
+                </repeatable>
                 <size>
-                    <height>339</height>
-                    <width>1649</width>
+                    <height>131</height>
+                    <width>631</width>
                 </size>
+                <texture>
+                    <fit>false</fit>
+                    <path>gui/ezparty/member_frame.png</path>
+                </texture>
+                <visible>false</visible>
             </member_frame>
             <player_frame>
-                <duplicate>
-                    <enable>false</enable>
-                </duplicate>
-                <enable>true</enable>
-                <image>gui/ezparty/player_frame.png</image>
                 <linked>true</linked>
-                <offset>
-                    <x>0</x>
-                    <y>0</y>
-                </offset>
-                <size>
-                    <height>339</height>
-                    <width>1649</width>
-                </size>
+                <one>
+                    <color>
+                        <alpha>255</alpha>
+                        <blue>255</blue>
+                        <green>255</green>
+                        <red>255</red>
+                    </color>
+                    <draggable>false</draggable>
+                    <enable>false</enable>
+                    <pos>
+                        <x>0</x>
+                        <y>0</y>
+                    </pos>
+                    <repeatable>
+                        <x>1</x>
+                        <y>1</y>
+                    </repeatable>
+                    <size>
+                        <height>150</height>
+                        <width>730</width>
+                    </size>
+                    <texture>
+                        <fit>false</fit>
+                        <path>gui/ezparty/player_frame.png</path>
+                    </texture>
+                    <visible>false</visible>
+                </one>
+                <two>
+                    <color>
+                        <alpha>255</alpha>
+                        <blue>255</blue>
+                        <green>255</green>
+                        <red>255</red>
+                    </color>
+                    <draggable>false</draggable>
+                    <enable>true</enable>
+                    <pos>
+                        <x>0</x>
+                        <y>0</y>
+                    </pos>
+                    <repeatable>
+                        <x>1</x>
+                        <y>1</y>
+                    </repeatable>
+                    <size>
+                        <height>150</height>
+                        <width>730</width>
+                    </size>
+                    <texture>
+                        <fit>false</fit>
+                        <path>gui/ezparty/player_frame.png</path>
+                    </texture>
+                    <visible>false</visible>
+                </two>
                 <unique>true</unique>
             </player_frame>
-            <scale>1</scale>
+            <scale>0.6</scale>
             <target_frame>
                 <above_member_frames>
                     <enable>false</enable>

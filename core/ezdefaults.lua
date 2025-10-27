@@ -35,30 +35,85 @@ local ezdefaults = {}
 -- Set default module settings
 -- EZ Party Default Settings
 ezdefaults.ezparty = {}
+-- ezdefaults.ezparty.reset = true
 ezdefaults.ezparty.enable = true
-ezdefaults.ezparty.scale = 1
+ezdefaults.ezparty.scale = .6
 ezdefaults.ezparty.layout = {}
-ezdefaults.ezparty.layout.vertical_spacing = 50
-ezdefaults.ezparty.layout.draggable = true
+ezdefaults.ezparty.layout.vertical_spacing = 32
+ezdefaults.ezparty.layout.draggable = false
 
 -- Party Player Frame Default Settings
 ezdefaults.ezparty.player_frame = {}
-ezdefaults.ezparty.player_frame.enable = true
 ezdefaults.ezparty.player_frame.linked = true                             -- when true, player frame position is linked to member frames
 ezdefaults.ezparty.player_frame.unique = true                             -- when true, player frame uses a unique image separate from member frames
-ezdefaults.ezparty.player_frame.image = 'gui/ezparty/player_frame.png'    -- path to player frame image file for when unique == true
-ezdefaults.ezparty.player_frame.size = { width = 1649, height = 339 }
-ezdefaults.ezparty.player_frame.offset = { x = 0, y =  0 }                -- offset becomes the ( x , y ) position when linked == false
-ezdefaults.ezparty.player_frame.duplicate = {}                            -- creates a second draggable player frame
-ezdefaults.ezparty.player_frame.duplicate.enable = false                  -- when true, locks the original frame to member frames
+ezdefaults.ezparty.player_frame.one = {}
+ezdefaults.ezparty.player_frame.one.pos = {}
+ezdefaults.ezparty.player_frame.one.pos.x = 0
+ezdefaults.ezparty.player_frame.one.pos.y = 0
+ezdefaults.ezparty.player_frame.one.visible = false
+ezdefaults.ezparty.player_frame.one.color = {}
+ezdefaults.ezparty.player_frame.one.color.alpha = 255
+ezdefaults.ezparty.player_frame.one.color.red = 255
+ezdefaults.ezparty.player_frame.one.color.green = 255
+ezdefaults.ezparty.player_frame.one.color.blue = 255
+ezdefaults.ezparty.player_frame.one.size = {}
+ezdefaults.ezparty.player_frame.one.size.width = 730
+ezdefaults.ezparty.player_frame.one.size.height = 150
+ezdefaults.ezparty.player_frame.one.texture = {}
+ezdefaults.ezparty.player_frame.one.texture.path = 'gui/ezparty/player_frame.png' 
+ezdefaults.ezparty.player_frame.one.texture.fit = false
+ezdefaults.ezparty.player_frame.one.repeatable = {}
+ezdefaults.ezparty.player_frame.one.repeatable.x = 1
+ezdefaults.ezparty.player_frame.one.repeatable.y = 1
+ezdefaults.ezparty.player_frame.one.draggable = false
+ezdefaults.ezparty.player_frame.one.enable = false
+ezdefaults.ezparty.player_frame.two = {}
+ezdefaults.ezparty.player_frame.two.pos = {}
+ezdefaults.ezparty.player_frame.two.pos.x = 0
+ezdefaults.ezparty.player_frame.two.pos.y = 0
+ezdefaults.ezparty.player_frame.two.visible = false
+ezdefaults.ezparty.player_frame.two.color = {}
+ezdefaults.ezparty.player_frame.two.color.alpha = 255
+ezdefaults.ezparty.player_frame.two.color.red = 255
+ezdefaults.ezparty.player_frame.two.color.green = 255
+ezdefaults.ezparty.player_frame.two.color.blue = 255
+ezdefaults.ezparty.player_frame.two.size = {}
+ezdefaults.ezparty.player_frame.two.size.width = 730
+ezdefaults.ezparty.player_frame.two.size.height = 150
+ezdefaults.ezparty.player_frame.two.texture = {}
+ezdefaults.ezparty.player_frame.two.texture.path = 'gui/ezparty/player_frame.png'
+ezdefaults.ezparty.player_frame.two.texture.fit = false
+ezdefaults.ezparty.player_frame.two.repeatable = {}
+ezdefaults.ezparty.player_frame.two.repeatable.x = 1
+ezdefaults.ezparty.player_frame.two.repeatable.y = 1
+ezdefaults.ezparty.player_frame.two.draggable = false
+ezdefaults.ezparty.player_frame.two.enable = true
 
 -- Member Frame Default Settings
 ezdefaults.ezparty.member_frame = {}
 ezdefaults.ezparty.member_frame.enable = true
 ezdefaults.ezparty.member_frame.linked = true
-ezdefaults.ezparty.member_frame.image = 'gui/ezparty/member_frame.png'
-ezdefaults.ezparty.member_frame.size = { width = 1649, height = 339 }
-ezdefaults.ezparty.member_frame.offset = { x = 0, y =  0 }
+
+--------
+ezdefaults.ezparty.member_frame.pos = {}
+ezdefaults.ezparty.member_frame.pos.x = 0
+ezdefaults.ezparty.member_frame.pos.y = 0
+ezdefaults.ezparty.member_frame.visible = false
+ezdefaults.ezparty.member_frame.color = {}
+ezdefaults.ezparty.member_frame.color.alpha = 255
+ezdefaults.ezparty.member_frame.color.red = 255
+ezdefaults.ezparty.member_frame.color.green = 255
+ezdefaults.ezparty.member_frame.color.blue = 255
+ezdefaults.ezparty.member_frame.size = {}
+ezdefaults.ezparty.member_frame.size.width = 631
+ezdefaults.ezparty.member_frame.size.height = 131
+ezdefaults.ezparty.member_frame.texture = {}
+ezdefaults.ezparty.member_frame.texture.path = 'gui/ezparty/member_frame.png' 
+ezdefaults.ezparty.member_frame.texture.fit = false
+ezdefaults.ezparty.member_frame.repeatable = {}
+ezdefaults.ezparty.member_frame.repeatable.x = 1
+ezdefaults.ezparty.member_frame.repeatable.y = 1
+ezdefaults.ezparty.member_frame.draggable = false
 
 -- Buff Display Default Settings
 ezdefaults.ezparty.buffs = {}

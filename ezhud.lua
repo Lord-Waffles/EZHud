@@ -37,7 +37,7 @@ local config = require('config')
 local texts = require('texts')
 local images = require('images')
 local ez = require('core.ezfunctions')
-local ezparty = require('modules.ezparty.ezparty_init')
+local ezparty = require('modules.ezparty.ezparty')
 local ezdefaults = require('core.ezdefaults') or {}
 require('tables')
 require('strings')
@@ -46,9 +46,11 @@ require('strings')
 local addon_settings = config.load(ezdefaults)
 config.save(addon_settings)
 
+ezparty.init(addon_settings)
+
 -- Run module inits on login
 windower.register_event('login', function()
-    
+ 
 end)
 
 
@@ -64,8 +66,5 @@ end)
 
 -- Prerender loop
 windower.register_event('prerender', function()
-    -- EZ Party Module
-    if addon_settings.ezparty.enable then
-        ezparty.init()
-    end
+    
 end)

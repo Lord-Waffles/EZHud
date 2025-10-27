@@ -25,8 +25,58 @@
         (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
         SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ]]
+require('strings')
+require('math')
 
 local ezfunctions = {}
 
+-- A function to convert the x, y co-ords of something into % of screen width, height
+function ezfunctions.convert_to_screen_percent(tbl)
+    if not tbl or type(tbl) ~= 'table' then
+        return nil, 'Invalid table'
+    end
+
+    local windower_settings = windower.get_windower_settings()
+    local screen_w = windower_settings.ui_x_res
+    local screen_h = windower_settings.ui_y_res
+
+    local key_x = tbl.x ~= nil and 'x' or (tbl.width and 'width' or nil)
+    local key_y = tbl.y ~= nil and 'y' or (tbl.height and 'height' or nil)
+
+    if key_x and screen_w and tbl[key_x] then
+        tbl[key_x] = tbl[key_x] / screen_w
+    end
+
+    if key_y and screen_h and tbl[key_y] then
+        tbl[key_y] = tbl[key_y] / screen_h
+    end
+
+    return tbl
+end
+
+-- a function that converts screen % to pixels 
+function ezfunctions.convert_to_screen_pixels(tbl)
+    if not tbl or type(tbl) ~= 'table' then
+        return nil, 'Invalid table'
+    end
+
+    local windower_settings = windower.get_windower_settings()
+    local screen_w = windower_settings.ui_x_res
+    local screen_h = windower_settings.ui_y_res
+
+    -- Determine axis keys
+    local key_x = tbl.x ~= nil and 'x' or (tbl.width and 'width' or nil)
+    local key_y = tbl.y ~= nil and 'y' or (tbl.height and 'height' or nil)
+
+    if key_x and screen_w and tbl[key_x] then
+        tbl[key_x] = tbl[key_x] * screen_w
+    end
+
+    if key_y and screen_h and tbl[key_y] then
+        tbl[key_y] = tbl[key_y] * screen_h
+    end
+
+    return tbl
+end
 
 return ezfunctions
