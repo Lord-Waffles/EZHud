@@ -31,8 +31,10 @@ local images = require('images')
 local texts = require('texts')
 local config = require('config')
 local ez = require('core.ezfunctions')
+local ezparty_frames = require('modules.ezparty.core.ezparty_frames')
 require('tables')
 require('strings')
+require('math')
 
 -- Variables
 local player_frame = {}
@@ -48,98 +50,9 @@ ezparty.member_frames = {}
 
 function ezparty.init(addon_settings)
     local scale = addon_settings.ezparty.scale or 1
-    local spacing = addon_settings.ezparty.layout.vertical_spacing or 50
 
-    -- Set up player frame settings
-    local pframe = {}
-    pframe.width = addon_settings.ezparty.player_frame.one.size.width * scale
-    pframe.height = addon_settings.ezparty.player_frame.one.size.height * scale
-    pframe.one = {}
-    pframe.one.pos = addon_settings.ezparty.player_frame.one.pos
-    pframe.two = {}
-    pframe.two.pos = addon_settings.ezparty.player_frame.two.pos
-    pframe.linked = addon_settings.ezparty.player_frame.linked
-
-    -- Set up member frame settings
-    local mframe = {}
-    mframe.width = addon_settings.ezparty.member_frame.size.width * scale
-    mframe.height = addon_settings.ezparty.member_frame.size.height * scale
-
-    -- Create player & memberframes
-    for i = 0, 5 do
-
-        -- Create player frames if enabled
-        if i == 0 then
-            ---------------------------------Player Frame 1------------------------------------
-            if addon_settings.ezparty.player_frame.one.enable ~= false then
-                player_frame[1] = images.new(addon_settings.ezparty.player_frame.one)
-                player_frame[1]:size(pframe.width, pframe.height)
-
-                -- If no position set in settings, default to bottom right above member frames
-                -- else convert settings.xml back to pixels
-                if pframe.one.pos.x == 0 and pframe.one.pos.y == 0 then
-                    player_frame[1]:pos( ui_width - pframe.width , ui_height - (spacing * 5 ) - (mframe.height * 5) - pframe.height )
-                    addon_settings.ezparty.player_frame.one.pos = ez.convert_to_screen_percent(player_frame[1].pos)
-                    config.save(addon_settings)
-                else
-                    player_frame[1]:pos(ez.convert_to_screen_pixels(addon_settings.ezparty.player_frame.one.pos))
-                end
-
-                -- If unique player frame is disabled, use member frame image
-                if addon_settings.ezparty.player_frame.unique ~= true then
-                    player_frame[1]:path(windower.addon_path .. addon_settings.ezparty.member_frame.texture.path)
-                else
-                    player_frame[1]:path(windower.addon_path .. addon_settings.ezparty.player_frame.one.texture.path)
-                end
-            end
-            ---------------------------------Player Frame 2------------------------------------
-            if addon_settings.ezparty.player_frame.two.enable ~= false then
-                player_frame[2] = images.new(addon_settings.ezparty.player_frame.two)
-                player_frame[2]:size(pframe.width, pframe.height)
-                -- If no position set in settings, default to lower middle screen
-                if pframe.two.pos.x == 0 and pframe.two.pos.y == 0 then
-                    player_frame[2]:pos( ui_width / 2 - pframe.width / 2, ui_height - (ui_height / 4.3) )
-                    addon_settings.ezparty.player_frame.two.pos = ez.convert_to_screen_percent(player_frame[2].pos)
-                    config.save(addon_settings)
-                else
-                    player_frame[2]:pos(ez.convert_to_screen_pixels(addon_settings.ezparty.player_frame.two.pos))
-                end
-
-
-                -- If unique player frame is disabled, use member frame image
-                if addon_settings.ezparty.player_frame.unique ~= true then
-                    player_frame[2]:path(windower.addon_path .. addon_settings.ezparty.member_frame.textuer.path)
-                else
-                    player_frame[2]:path(windower.addon_path .. addon_settings.ezparty.player_frame.two.texture.path)
-                end
-            end
-        else
-            -- Create member frames
-            member_frames[i] = images.new(addon_settings.ezparty.member_frame)
-            member_frames[i]:size(mframe.width, mframe.height)
-            member_frames[i]:path(windower.addon_path .. addon_settings.ezparty.member_frame.texture.path)
-            if i = 1 then
-                if member_frames[i].pos.x == 0 and member_frames[i].pos.y == then
-                    member_frames[i]:pos( ui_width - mframe.width , ui_height - (spacing * (4 - i)) - (mframe.height * (6 - i)) )
-                    member_frames[i]:show()
-                    ezparty.member_frames[i] = member_frames[i]
-                else
-                end
-            end
-        end
-    end
-
-    if player_frame[1] then 
-        player_frame[1]:show()
-        ezparty.player_frame.one = player_frame[1]
-    end
-
-    if player_frame[2] then
-        player_frame[2]:show()
-        ezparty.player_frame.two = player_frame[2]
-    end
-
-    return ezparty
+    ezparty_frames.create(addon_settings)
+    
 end
 
 return ezparty

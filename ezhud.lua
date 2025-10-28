@@ -50,7 +50,7 @@ ezparty.init(addon_settings)
 
 -- Run module inits on login
 windower.register_event('login', function()
- 
+  ezparty.init(addon_settings)
 end)
 
 
@@ -66,5 +66,5 @@ end)
 
 -- Prerender loop
 windower.register_event('prerender', function()
-    
+
 end)

@@ -114,6 +114,9 @@ ezdefaults.ezparty.member_frame.repeatable = {}
 ezdefaults.ezparty.member_frame.repeatable.x = 1
 ezdefaults.ezparty.member_frame.repeatable.y = 1
 ezdefaults.ezparty.member_frame.draggable = false
+ezdefaults.ezparty.member_frame.offset = {}
+ezdefaults.ezparty.member_frame.offset.x = 100
+ezdefaults.ezparty.member_frame.offset.y = 0
 
 -- Buff Display Default Settings
 ezdefaults.ezparty.buffs = {}
@@ -163,4 +166,12 @@ ezdefaults.ezmount.name = 'Raptor'
 ezdefaults.eztargeting = {}
 ezdefaults.eztargeting.enable = true
 
+-- Saved UI settings
+-- This section is for storing the current UI size when saving settings and position.
+-- That way we can recall the difference in resolution if it were to change and adjust things like scale properly
+
+ezdefaults.saved_ui_info = {}
+ezdefaults.saved_ui_info.ui_res = {}
+ezdefaults.saved_ui_info.ui_res.x = nil
+ezdefaults.saved_ui_info.ui_res.y = nil
 return ezdefaults
