@@ -27,32 +27,34 @@
 ]]
 
 -- Libs
-local images = require('images')
-local texts = require('texts')
-local config = require('config')
-local ez = require('core.ezfunctions')
+local ezparty_text = require('modules.ezparty.core.ezparty_text')
+local ezparty_select = require('modules.ezparty.core.ezparty_select')
 local ezparty_frames = require('modules.ezparty.core.ezparty_frames')
+
 require('tables')
 require('strings')
 require('math')
 
--- Variables
-local player_frame = {}
-local member_frames = {}
-local text_keys = {'slot_label', 'name', 'hpp', 'hp_label', 'hp_value', 'mp_label', 'mp_value', 'tp_label', 'tp_value'}
-local ui_width = windower.get_windower_settings().ui_x_res
-local ui_height = windower.get_windower_settings().ui_y_res
-
 -- EZ Party Module
 local ezparty = {}
-ezparty.player_frame = {}
-ezparty.member_frames = {}
+ezparty.frames = {}
+ezparty.text = {}
 
 function ezparty.init(addon_settings)
-    local scale = addon_settings.ezparty.scale or 1
+    if not addon_settings then
+        return
+    end
 
-    ezparty_frames.create(addon_settings)
-    
+    ezparty.frames = ezparty_frames.create(addon_settings) or {}
+    ezparty.text = ezparty_text.create(addon_settings) or {}
+    ezparty_select.create(addon_settings)
+
+end
+
+function ezparty.update()
+    if ezparty_text and ezparty_text.update then
+        ezparty_text.update()
+    end
 end
 
 return ezparty

@@ -34,8 +34,6 @@ _addon.language = 'english'
 
 -- Libs
 local config = require('config')
-local texts = require('texts')
-local images = require('images')
 local ez = require('core.ezfunctions')
 local ezparty = require('modules.ezparty.ezparty')
 local ezdefaults = require('core.ezdefaults') or {}
@@ -66,5 +64,5 @@ end)
 
 -- Prerender loop
 windower.register_event('prerender', function()
-
+    ezparty.update()
 end)

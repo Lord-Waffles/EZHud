@@ -30,7 +30,6 @@ local ezparty_frames = {}
 
 -- Libs
 local images = require('images')
-local texts = require('texts')
 local config = require('config')
 local ez = require('core.ezfunctions')
 require('tables')
@@ -40,7 +39,6 @@ require('math')
 -- Variables
 local player_frame = {}
 local member_frames = {}
-local text_keys = {'slot_label', 'name', 'hpp', 'hp_label', 'hp_value', 'mp_label', 'mp_value', 'tp_label', 'tp_value'}
 local ui_width = windower.get_windower_settings().ui_x_res
 local ui_height = windower.get_windower_settings().ui_y_res
 
