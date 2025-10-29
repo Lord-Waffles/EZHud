@@ -36,6 +36,7 @@ _addon.language = 'english'
 local config = require('config')
 local ez = require('core.ezfunctions')
 local ezparty = require('modules.ezparty.ezparty')
+local ezgui_creator = require('modules.ezgui_creator.ezgui_creator')
 local ezdefaults = require('core.ezdefaults') or {}
 require('tables')
 require('strings')
@@ -45,6 +46,7 @@ local addon_settings = config.load(ezdefaults)
 config.save(addon_settings)
 
 ezparty.init(addon_settings)
+ezgui_creator.init(addon_settings)
 
 -- Run module inits on login
 windower.register_event('login', function()
@@ -53,12 +55,29 @@ end)
 
 
 -- Addon command handler
-windower.register_event('addon command', function(command)
-    command = command:lower()
+windower.register_event('addon command', function(command, ...)
+    local args = {...}
+    command = command and command:lower() or ''
 
     if command == 'debug' then
-            windower.add_to_chat(tostring(addon_settings))
+        windower.add_to_chat(tostring(addon_settings))
         return
+    end
+
+    if command == 'gc' then
+        local action = args[1] and args[1]:lower() or ''
+        if action == 'open' then
+            ezgui_creator.open()
+        elseif action == 'close' then
+            ezgui_creator.close()
+        else
+            ezgui_creator.toggle()
+        end
+        return
+    end
+
+    if command == 'reload' then
+      windower.send_command('lua reload ezhud')
     end
 end)
 

@@ -28,6 +28,7 @@
 
 -- Libs
 local ezparty_text = require('modules.ezparty.core.ezparty_text')
+local ezparty_bars = require('modules.ezparty.core.ezparty_bars')
 local ezparty_select = require('modules.ezparty.core.ezparty_select')
 local ezparty_frames = require('modules.ezparty.core.ezparty_frames')
 
@@ -39,14 +40,16 @@ require('math')
 local ezparty = {}
 ezparty.frames = {}
 ezparty.text = {}
+ezparty.bars = {}
 
 function ezparty.init(addon_settings)
     if not addon_settings then
         return
     end
 
-    ezparty.frames = ezparty_frames.create(addon_settings) or {}
     ezparty.text = ezparty_text.create(addon_settings) or {}
+    ezparty.frames = ezparty_frames.create(addon_settings) or {}
+    ezparty.bars = ezparty_bars.create(addon_settings) or {}
     ezparty_select.create(addon_settings)
 
 end
@@ -54,6 +57,9 @@ end
 function ezparty.update()
     if ezparty_text and ezparty_text.update then
         ezparty_text.update()
+    end
+    if ezparty_bars and ezparty_bars.update then
+        ezparty_bars.update()
     end
 end
 

@@ -79,4 +79,19 @@ function ezfunctions.convert_to_screen_pixels(tbl)
     return tbl
 end
 
+-- linearly interpolate between two numeric values
+function ezfunctions.lerp(a, b, t)
+    a = tonumber(a) or 0
+    b = tonumber(b) or 0
+    t = tonumber(t) or 0
+
+    if t < 0 then
+        t = 0
+    elseif t > 1 then
+        t = 1
+    end
+
+    return a + (b - a) * t
+end
+
 return ezfunctions
