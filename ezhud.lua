@@ -36,6 +36,7 @@ _addon.language = 'english'
 local config = require('config')
 local ez = require('core.ezfunctions')
 local ezparty = require('modules.ezparty.ezparty')
+local ezmount = require('modules.ezmount.ezmount')
 local ezgui_creator = require('modules.ezgui_creator.ezgui_creator')
 local ezdefaults = require('core.ezdefaults') or {}
 require('tables')
@@ -47,10 +48,16 @@ config.save(addon_settings)
 
 ezparty.init(addon_settings)
 ezgui_creator.init(addon_settings)
+ezmount.init(addon_settings)
 
 -- Run module inits on login
 windower.register_event('login', function()
   ezparty.init(addon_settings)
+  ezmount.init(addon_settings)
+end)
+
+windower.register_event('logout', function()
+  ezmount.destroy()
 end)
 
 
