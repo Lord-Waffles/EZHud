@@ -40,6 +40,9 @@ local state = {
 local refresh_settings_labels
 local update_text_visual
 local update_image_visual
+local update_highlight
+
+local CURSOR_PIXEL_ADJUST = 13
 
 local KEY_RELEASE_COMMANDS = {
     [200] = 'UP',
@@ -153,9 +156,11 @@ local function ensure_cursor(force_recreate)
 
     state.cursor:visible(true)
     local width, height = state.cursor:extents()
+    local half_width = math.floor(((width or 0) / 2) + 0.5)
+    local half_height = math.floor(((height or 0) / 2) + 0.5)
     state.cursor_offset = {
-        x = math.floor((width or 0) / 2),
-        y = math.floor((height or 0) / 2),
+        x = half_width + CURSOR_PIXEL_ADJUST,
+        y = half_height + CURSOR_PIXEL_ADJUST,
     }
 
     local pos_x = math.max(0, target_x - (state.cursor_offset.x or 0))
@@ -628,7 +633,7 @@ local function clear_view()
     state.mouse_down_button = nil
 end
 
-local function update_highlight()
+update_highlight = function()
     destroy_highlight()
 
     local element = state.selected

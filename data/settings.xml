@@ -463,8 +463,12 @@
                     <mp_bar>
                         <offset>
                             <x>334</x>
-                            <y>9</y>
+                            <y>87</y>
                         </offset>
+                        <size>
+                            <height>25</height>
+                            <width>178</width>
+                        </size>
                     </mp_bar>
                     <tp_bar>
                         <offset>

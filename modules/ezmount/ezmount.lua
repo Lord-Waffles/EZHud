@@ -45,10 +45,16 @@ local buttons = {
     player_two = {},
 }
 
+local last_frames = {
+    player_one = nil,
+    player_two = nil,
+}
+
 local addon_config
 local mouse_event_id
 local hovered_button
 local pressed_button
+local geometry_event_id
 
 local function deepcopy(value)
     if type(value) ~= 'table' then
@@ -120,8 +126,10 @@ local function compute_player_frames(addon_settings)
     local one_config = deepcopy(player_frame.one and player_frame.one.pos or {})
     local one_size = player_frame.one and player_frame.one.size or {}
     local one_enabled = player_frame.one and player_frame.one.enable ~= false
-    local one_width = math.floor(((one_size.width or 0) * scale) + 0.5)
-    local one_height = math.floor(((one_size.height or 0) * scale) + 0.5)
+    local one_base_width = tonumber(one_size.width) or 0
+    local one_base_height = tonumber(one_size.height) or 0
+    local one_width = math.floor(((one_base_width) * scale) + 0.5)
+    local one_height = math.floor(((one_base_height) * scale) + 0.5)
 
     if one_enabled and one_width > 0 and one_height > 0 then
         if not one_config or ((one_config.x or 0) == 0 and (one_config.y or 0) == 0) then
@@ -137,6 +145,9 @@ local function compute_player_frames(addon_settings)
                 y = anchor_y,
                 width = one_width,
                 height = one_height,
+                base_width = one_base_width,
+                base_height = one_base_height,
+                scale = scale,
             }
         else
             local pos = ez.convert_to_screen_pixels(one_config) or { x = 0, y = 0 }
@@ -145,6 +156,9 @@ local function compute_player_frames(addon_settings)
                 y = math.floor(pos.y or 0 + 0.5),
                 width = one_width,
                 height = one_height,
+                base_width = one_base_width,
+                base_height = one_base_height,
+                scale = scale,
             }
         end
     end
@@ -152,8 +166,10 @@ local function compute_player_frames(addon_settings)
     local two_config = deepcopy(player_frame.two and player_frame.two.pos or {})
     local two_size = player_frame.two and player_frame.two.size or {}
     local two_enabled = player_frame.two and player_frame.two.enable ~= false
-    local two_width = math.floor(((two_size.width or 0) * scale) + 0.5)
-    local two_height = math.floor(((two_size.height or 0) * scale) + 0.5)
+    local two_base_width = tonumber(two_size.width) or 0
+    local two_base_height = tonumber(two_size.height) or 0
+    local two_width = math.floor(((two_base_width) * scale) + 0.5)
+    local two_height = math.floor(((two_base_height) * scale) + 0.5)
 
     if two_enabled and two_width > 0 and two_height > 0 then
         if not two_config or ((two_config.x or 0) == 0 and (two_config.y or 0) == 0) then
@@ -162,6 +178,9 @@ local function compute_player_frames(addon_settings)
                 y = math.floor(screen_h - (screen_h / 4.3) + 0.5),
                 width = two_width,
                 height = two_height,
+                base_width = two_base_width,
+                base_height = two_base_height,
+                scale = scale,
             }
         else
             local pos = ez.convert_to_screen_pixels(two_config) or { x = 0, y = 0 }
@@ -170,6 +189,9 @@ local function compute_player_frames(addon_settings)
                 y = math.floor(pos.y or 0 + 0.5),
                 width = two_width,
                 height = two_height,
+                base_width = two_base_width,
+                base_height = two_base_height,
+                scale = scale,
             }
         end
     end
@@ -201,12 +223,19 @@ local function destroy_all_buttons()
 
     hovered_button = nil
     pressed_button = nil
+    last_frames.player_one = nil
+    last_frames.player_two = nil
 end
 
 local function deactivate()
     if mouse_event_id then
         windower.unregister_event(mouse_event_id)
         mouse_event_id = nil
+    end
+
+    if geometry_event_id then
+        windower.unregister_event(geometry_event_id)
+        geometry_event_id = nil
     end
 
     destroy_all_buttons()
@@ -249,29 +278,34 @@ local function apply_geometry(button, frame_info)
 
     local frame_height = math.max(frame_info.height or 0, 1)
     local frame_width = math.max(frame_info.width or 0, 1)
+    local base_height = math.max(frame_info.base_height or 0, 0)
+    local base_width = math.max(frame_info.base_width or 0, 0)
 
-    local scale_factor = frame_height / TEXTURE_HEIGHT
+    local scale_factor = 0
+    if base_height > 0 then
+        scale_factor = frame_height / base_height
+    elseif base_width > 0 then
+        scale_factor = frame_width / base_width
+    end
+    if scale_factor <= 0 then
+        scale_factor = tonumber(frame_info.scale) or 1
+    end
+    if scale_factor <= 0 then
+        scale_factor = frame_height / TEXTURE_HEIGHT
+    end
+
     local button_width = math.max(math.floor(TEXTURE_WIDTH * scale_factor + 0.5), 1)
     local button_height = math.max(math.floor(TEXTURE_HEIGHT * scale_factor + 0.5), 1)
 
-    local detection_width = math.max(math.floor(frame_width * 0.22 + 0.5), math.floor(frame_height * 0.8 + 0.5), 32)
-    local detection_height = frame_height
-
-    local area_x = math.floor((frame_info.x or 0) + 0.5)
-    local area_y = math.floor((frame_info.y or 0) + 0.5)
+    local button_x = math.floor((frame_info.x or 0) + 0.5)
+    local button_y = math.floor((frame_info.y or 0) + 0.5)
 
     button.area = {
-        x = area_x,
-        y = area_y,
-        width = detection_width,
-        height = detection_height,
+        x = button_x,
+        y = button_y,
+        width = button_width,
+        height = button_height,
     }
-
-    local anchor_x = area_x + math.floor(detection_width / 2 + 0.5)
-    local anchor_y = area_y + math.floor(detection_height / 2 + 0.5)
-
-    local button_x = anchor_x - math.floor(button_width / 2 + 0.5)
-    local button_y = anchor_y - math.floor(button_height / 2 + 0.5)
 
     button.hover:size(button_width, button_height)
     button.hover:pos(button_x, button_y)
@@ -386,19 +420,60 @@ local function handle_mouse(type, x, y, _delta, _blocked)
     end
 end
 
+local function frames_equal(a, b)
+    if a == nil and b == nil then
+        return true
+    end
+    if not a or not b then
+        return false
+    end
+
+    return a.x == b.x
+        and a.y == b.y
+        and a.width == b.width
+        and a.height == b.height
+        and a.base_width == b.base_width
+        and a.base_height == b.base_height
+        and a.scale == b.scale
+end
+
+local function copy_frame(frame)
+    if not frame then
+        return nil
+    end
+
+    return {
+        x = frame.x,
+        y = frame.y,
+        width = frame.width,
+        height = frame.height,
+        base_width = frame.base_width,
+        base_height = frame.base_height,
+        scale = frame.scale,
+    }
+end
+
 local function apply_frame_positions(addon_settings)
     local frames = compute_player_frames(addon_settings)
 
     if frames.player_one then
-        apply_geometry(buttons.player_one, frames.player_one)
-    else
+        if not frames_equal(frames.player_one, last_frames.player_one) then
+            apply_geometry(buttons.player_one, frames.player_one)
+            last_frames.player_one = copy_frame(frames.player_one)
+        end
+    elseif last_frames.player_one then
         destroy_button(buttons.player_one)
+        last_frames.player_one = nil
     end
 
     if frames.player_two then
-        apply_geometry(buttons.player_two, frames.player_two)
-    else
+        if not frames_equal(frames.player_two, last_frames.player_two) then
+            apply_geometry(buttons.player_two, frames.player_two)
+            last_frames.player_two = copy_frame(frames.player_two)
+        end
+    elseif last_frames.player_two then
         destroy_button(buttons.player_two)
+        last_frames.player_two = nil
     end
 
     if (buttons.player_one.visible or buttons.player_two.visible) and not mouse_event_id then
@@ -419,6 +494,14 @@ function ezmount.init(settings)
     end
 
     apply_frame_positions(settings)
+
+    if not geometry_event_id then
+        geometry_event_id = windower.register_event('prerender', function()
+            if addon_config and addon_config.ezmount and addon_config.ezmount.enable ~= false then
+                apply_frame_positions(addon_config)
+            end
+        end)
+    end
 end
 
 function ezmount.destroy()
