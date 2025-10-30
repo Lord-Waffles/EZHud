@@ -2,6 +2,7 @@ local config = require('config')
 local images = require('images')
 local texts = require('texts')
 local definitions = require('modules.ezgui_creator.core.definitions')
+local ezcastbar_module = require('modules.ezcastbar.ezcastbar')
 
 require('tables')
 require('strings')
@@ -37,10 +38,27 @@ local state = {
     mouse_down_button = nil,
 }
 
+local CASTBAR_DEFAULTS = {
+    scale = 1,
+    offset_x = 0,
+    offset_y = 0,
+    fade_duration = 0.6,
+}
+
 local refresh_settings_labels
 local update_text_visual
 local update_image_visual
 local update_highlight
+
+local function clamp(value, minimum, maximum)
+    if minimum and value < minimum then
+        value = minimum
+    end
+    if maximum and value > maximum then
+        value = maximum
+    end
+    return value
+end
 
 local CURSOR_PIXEL_ADJUST = 13
 
@@ -66,6 +84,24 @@ end
 local function get_screen_size()
     local settings = windower.get_windower_settings()
     return settings.ui_x_res or 1920, settings.ui_y_res or 1080
+end
+
+local function ensure_castbar_settings()
+    if not state.addon_settings then
+        return nil
+    end
+
+    state.addon_settings.ezcastbar = state.addon_settings.ezcastbar or {}
+    local settings = state.addon_settings.ezcastbar
+
+    settings.scale = tonumber(settings.scale) or CASTBAR_DEFAULTS.scale
+    settings.fade_duration = tonumber(settings.fade_duration) or CASTBAR_DEFAULTS.fade_duration
+
+    settings.offset = settings.offset or {}
+    settings.offset.x = math.floor(tonumber(settings.offset.x) or CASTBAR_DEFAULTS.offset_x)
+    settings.offset.y = math.floor(tonumber(settings.offset.y) or CASTBAR_DEFAULTS.offset_y)
+
+    return settings
 end
 
 local function ensure_overlay()
@@ -1256,6 +1292,186 @@ local function spawn_definition(definition)
     ensure_cursor(true)
 end
 
+local function show_castbar_settings()
+    clear_view()
+
+    if not state.active or not state.addon_settings then
+        return
+    end
+
+    local settings = ensure_castbar_settings()
+    if not settings then
+        return
+    end
+
+    create_instruction('Adjust the EZ Castbar scale, offset, and fade. Use Preview to see the changes in-game.')
+
+    local screen_w, screen_h = get_screen_size()
+    local base_x = math.floor(screen_w / 2) - 360
+    local base_y = 180
+    local button_width = 180
+    local button_height = 38
+    local column_gap = 28
+    local controls_top = base_y + 120
+
+    local info_label = texts.new('', {
+        text = {
+            font = 'Arial',
+            size = 20,
+            alpha = 255,
+            red = 255,
+            green = 230,
+            blue = 160,
+            stroke = { width = 2, alpha = 220, red = 0, green = 0, blue = 0 },
+        },
+        bg = { visible = false },
+        flags = { draggable = false },
+        pos = { x = base_x, y = base_y },
+    })
+    info_label:visible(true)
+    state.labels[#state.labels + 1] = { object = info_label }
+
+    local function refresh_display()
+        local text = string.format(
+            'Scale: %.2f\nOffset X: %d px\nOffset Y: %d px\nFade Duration: %.1fs',
+            settings.scale or CASTBAR_DEFAULTS.scale,
+            settings.offset.x or CASTBAR_DEFAULTS.offset_x,
+            settings.offset.y or CASTBAR_DEFAULTS.offset_y,
+            settings.fade_duration or CASTBAR_DEFAULTS.fade_duration
+        )
+        info_label:text(text)
+    end
+
+    local function adjust_scale(delta)
+        local current = settings.scale or CASTBAR_DEFAULTS.scale
+        current = clamp(current + delta, 0.25, 3.0)
+        settings.scale = math.floor(current * 100 + 0.5) / 100
+        refresh_display()
+    end
+
+    local function adjust_offset(dx, dy)
+        settings.offset.x = math.floor((settings.offset.x or CASTBAR_DEFAULTS.offset_x) + dx)
+        settings.offset.y = math.floor((settings.offset.y or CASTBAR_DEFAULTS.offset_y) + dy)
+        refresh_display()
+    end
+
+    local function adjust_fade(delta)
+        local current = settings.fade_duration or CASTBAR_DEFAULTS.fade_duration
+        current = clamp(current + delta, 0.1, 5.0)
+        settings.fade_duration = math.floor(current * 100 + 0.5) / 100
+        refresh_display()
+    end
+
+    local function reset_offsets()
+        settings.offset.x = CASTBAR_DEFAULTS.offset_x
+        settings.offset.y = CASTBAR_DEFAULTS.offset_y
+        refresh_display()
+    end
+
+    local function reset_all()
+        settings.scale = CASTBAR_DEFAULTS.scale
+        settings.offset.x = CASTBAR_DEFAULTS.offset_x
+        settings.offset.y = CASTBAR_DEFAULTS.offset_y
+        settings.fade_duration = CASTBAR_DEFAULTS.fade_duration
+        refresh_display()
+    end
+
+    local function preview_castbar()
+        if ezcastbar_module and ezcastbar_module.reload then
+            ezcastbar_module.reload(state.addon_settings)
+        end
+        if ezcastbar_module and ezcastbar_module.show_test_bar then
+            ezcastbar_module.show_test_bar(5)
+        end
+    end
+
+    local function register_control_button(column, row, label, callback)
+        local x = base_x + (column - 1) * (button_width + column_gap)
+        local y = controls_top + (row - 1) * (button_height + 10)
+        register_button('editor', create_button(label, x, y, button_width, button_height, callback))
+    end
+
+    -- Scale controls
+    register_control_button(1, 1, 'Scale +0.05', function()
+        adjust_scale(0.05)
+    end)
+    register_control_button(1, 2, 'Scale -0.05', function()
+        adjust_scale(-0.05)
+    end)
+    register_control_button(1, 3, 'Scale +0.25', function()
+        adjust_scale(0.25)
+    end)
+    register_control_button(1, 4, 'Scale -0.25', function()
+        adjust_scale(-0.25)
+    end)
+
+    -- Offset coarse adjustments
+    register_control_button(2, 1, 'Offset Left (-10)', function()
+        adjust_offset(-10, 0)
+    end)
+    register_control_button(2, 2, 'Offset Right (+10)', function()
+        adjust_offset(10, 0)
+    end)
+    register_control_button(2, 3, 'Offset Up (-10)', function()
+        adjust_offset(0, -10)
+    end)
+    register_control_button(2, 4, 'Offset Down (+10)', function()
+        adjust_offset(0, 10)
+    end)
+    register_control_button(2, 5, 'Reset Offset', function()
+        reset_offsets()
+    end)
+
+    -- Offset fine adjustments
+    register_control_button(3, 1, 'Fine Left (-1)', function()
+        adjust_offset(-1, 0)
+    end)
+    register_control_button(3, 2, 'Fine Right (+1)', function()
+        adjust_offset(1, 0)
+    end)
+    register_control_button(3, 3, 'Fine Up (-1)', function()
+        adjust_offset(0, -1)
+    end)
+    register_control_button(3, 4, 'Fine Down (+1)', function()
+        adjust_offset(0, 1)
+    end)
+
+    -- Fade controls and reset
+    register_control_button(4, 1, 'Fade +0.1s', function() adjust_fade(0.1) end)
+    register_control_button(4, 2, 'Fade -0.1s', function() adjust_fade(-0.1) end)
+    register_control_button(4, 3, 'Fade +0.5s', function() adjust_fade(0.5) end)
+    register_control_button(4, 4, 'Fade -0.5s', function() adjust_fade(-0.5) end)
+    register_control_button(4, 5, 'Reset All', function()
+        reset_all()
+    end)
+    register_control_button(4, 6, 'Test Castbar (5s)', preview_castbar)
+
+    local footer_y = screen_h - 90
+    register_button('footer', create_button('Return to Main Menu', 60, footer_y, 240, 34, function()
+        ezgui_creator.show_main_menu()
+    end))
+
+    register_button('footer', create_button('Preview Castbar', 320, footer_y, 200, 34, function()
+        preview_castbar()
+    end))
+
+    register_button('footer', create_button('Save & Apply', 540, footer_y, 200, 34, function()
+        config.save(state.addon_settings)
+        if ezcastbar_module and ezcastbar_module.reload then
+            ezcastbar_module.reload(state.addon_settings)
+        end
+        windower.add_to_chat(207, '[EZHud] Saved EZ Castbar settings.')
+        preview_castbar()
+    end))
+
+    register_button('footer', create_button('Close', screen_w - 220, footer_y, 160, 34, function()
+        ezgui_creator.close()
+    end))
+
+    refresh_display()
+    ensure_cursor(true)
+end
+
 local function enter_editor(key)
     local resolved = definitions.resolve(state.addon_settings, key)
     if not resolved then
@@ -1303,7 +1519,8 @@ function ezgui_creator.show_main_menu()
     local center_x = math.floor(screen_w / 2)
     local button_width = 260
     local spacing = 24
-    local total_width = button_width * 3 + spacing * 2
+    local button_count = 4
+    local total_width = button_width * button_count + spacing * (button_count - 1)
     local start_x = math.floor(center_x - total_width / 2)
     local start_y = math.floor(screen_h / 2) - 40
 
@@ -1317,6 +1534,10 @@ function ezgui_creator.show_main_menu()
 
     register_button('main', create_button('Target Frame', start_x + (button_width + spacing) * 2, start_y, button_width, 48, function()
         enter_editor('target')
+    end))
+
+    register_button('main', create_button('Castbar', start_x + (button_width + spacing) * 3, start_y, button_width, 48, function()
+        show_castbar_settings()
     end))
 
     register_button('footer', create_button('Close', screen_w - 180, screen_h - 100, 140, 36, function()

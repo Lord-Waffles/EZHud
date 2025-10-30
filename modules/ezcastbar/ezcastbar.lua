@@ -108,7 +108,7 @@ local DEFAULT_FRAME_SIZE = { width = 350, height = 13 }
 local DEFAULT_BAR_SIZE = { width = 346, height = 9 }
 local DEFAULT_BAR_OFFSET = { x = 2, y = 2 }
 local DEFAULT_FADE_DURATION = 0.6
-local LABEL_OFFSET_Y = 28
+local LABEL_OFFSET_Y = 24
 local FADE_HOLD_DURATION = 0.2
 
 local DEFAULT_TEXT_COLOR = { red = 120, green = 210, blue = 255 }
@@ -349,6 +349,7 @@ local function ensure_objects()
         color = { red = 255, green = 255, blue = 255, alpha = 255 },
         draggable = false,
         visible = false,
+        priority = 8,
     })
 
     state.bar = images.new({
@@ -357,6 +358,7 @@ local function ensure_objects()
         color = { red = 255, green = 255, blue = 255, alpha = 255 },
         draggable = false,
         visible = false,
+        priority = 9,
     })
 
     state.label = texts.new('', {
@@ -376,6 +378,9 @@ local function ensure_objects()
     end
     if state.label.bottom_justified then
         state.label:bottom_justified(false)
+    end
+    if state.label.priority then
+        state.label:priority(10)
     end
     apply_label_color(DEFAULT_TEXT_COLOR)
     state.label:hide()
@@ -489,7 +494,7 @@ local function apply_visual_settings(config)
         if state.label.bold then
             state.label:bold(true)
         end
-        state.label:pos(pos_x, pos_y - state.label_offset)
+        state.label:pos(pos_x + state.bar_offset.x, pos_y - state.label_offset)
         state.label:hide()
     end
 
@@ -517,7 +522,7 @@ local function show_cast(name)
         if state.label.bold then
             state.label:bold(true)
         end
-        state.label:pos(state.position.x, state.position.y - state.label_offset)
+        state.label:pos(state.position.x + state.bar_offset.x, state.position.y - state.label_offset)
         state.label:show()
     end
 

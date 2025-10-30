@@ -697,6 +697,9 @@
         <eztargeting>
             <enable>true</enable>
         </eztargeting>
+        <savedUI>
+
+        </savedUI>
         <saved_ui_info>
             <ui_res>
 
@@ -707,6 +710,9 @@
         </savedui>
     </global>
     <roook>
+        <ezcastbar>
+            <fade_duration>0.8</fade_duration>
+        </ezcastbar>
         <ezparty>
             <gui_profiles>
                 <player>
@@ -744,6 +750,20 @@
                     </tp_bar>
                 </player>
             </gui_profiles>
+            <member_frame>
+                <pos>
+                    <x>0.83230088495575</x>
+                    <y>0.62307692307692</y>
+                </pos>
+            </member_frame>
+            <player_frame>
+                <two>
+                    <pos>
+                        <x>0.40309734513274</x>
+                        <y>0.76692307692308</y>
+                    </pos>
+                </two>
+            </player_frame>
         </ezparty>
     </roook>
 </settings>

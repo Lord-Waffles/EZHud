@@ -481,11 +481,12 @@ local function compute_member_positions(addon_settings, scale)
     if not member_pos_config or ((member_pos_config.x or 0) == 0 and (member_pos_config.y or 0) == 0) then
         base = {
             x = screen_w - width,
-            y = screen_h - height - (height + spacing) * (DEFAULT_MEMBER_COUNT - 1),
+            y = screen_h - height - (height + spacing) * (DEFAULT_MEMBER_COUNT - 1) - spacing,
         }
     else
         base = ez.convert_to_screen_pixels(member_pos_config) or { x = 0, y = 0 }
     end
+    base.y = math.max(0, base.y)
 
     local positions = {}
     for index = 1, DEFAULT_MEMBER_COUNT do
