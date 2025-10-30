@@ -152,10 +152,12 @@ ezdefaults.ezparty.target_frame.above_member_frames.offset = { x = 0, y = -10 }
 -- EZ Castbar Defaults
 ezdefaults.ezcastbar = {}
 ezdefaults.ezcastbar.enable = true
-ezdefaults.ezcastbar.image_frame = 'gui/ezcastbar/castbar_frame.png'
-ezdefaults.ezcastbar.image_bar = 'gui/ezcastbar/castbar_bar.png'
-ezdefaults.ezcastbar.size = { width = 300, height = 25 }
-ezdefaults.ezcastbar.offset = { x = 0, y = -200 }
+ezdefaults.ezcastbar.image_frame = 'gui/ezcastbar/ezcastbar_bg.png'
+ezdefaults.ezcastbar.image_bar = 'gui/ezcastbar/ezcastbar_bar.png'
+ezdefaults.ezcastbar.scale = 1
+ezdefaults.ezcastbar.size = { width = 350, height = 13 }
+ezdefaults.ezcastbar.offset = { x = 0, y = 0 }
+ezdefaults.ezcastbar.fade_duration = 0.6
 
 -- EZ Mount Defaults
 ezdefaults.ezmount = {}

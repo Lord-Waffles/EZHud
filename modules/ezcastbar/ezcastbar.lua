@@ -30,12 +30,22 @@ local ezcastbar = {}
 
 local images = require('images')
 local texts = require('texts')
-local packets = require('packets')
 local resources = require('resources')
 local ez = require('core.ezfunctions')
 require('tables')
 require('strings')
 require('math')
+
+local DEFAULT_FRAME_PATH = 'gui/ezcastbar/ezcastbar_bg.png'
+local DEFAULT_BAR_PATH = 'gui/ezcastbar/ezcastbar_bar.png'
+local LEGACY_FRAME_PATH = 'gui/ezcastbar/castbar_frame.png'
+local LEGACY_BAR_PATH = 'gui/ezcastbar/castbar_bar.png'
+
+local ACTION_CATEGORY_MAGIC_START = 8
+local ACTION_CATEGORY_MAGIC_FINISH = 4
+local ACTION_CATEGORY_JA_FINISH = 15
+local ACTION_CATEGORY_WS_FINISH = 6
+local INTERRUPT_PARAM = 28787
 
 local INTERRUPT_MESSAGES = {
     [62] = true, -- Unable to cast spells at this time.
@@ -94,6 +104,20 @@ local INTERRUPT_MESSAGES = {
     [647] = true,
 }
 
+local DEFAULT_FRAME_SIZE = { width = 350, height = 13 }
+local DEFAULT_BAR_SIZE = { width = 346, height = 9 }
+local DEFAULT_BAR_OFFSET = { x = 2, y = 2 }
+local DEFAULT_FADE_DURATION = 0.6
+local LABEL_OFFSET_Y = 28
+local FADE_HOLD_DURATION = 0.2
+
+local DEFAULT_TEXT_COLOR = { red = 120, green = 210, blue = 255 }
+local SUCCESS_TEXT_COLOR = { red = 140, green = 255, blue = 180 }
+local INTERRUPT_TEXT_COLOR = { red = 255, green = 145, blue = 145 }
+local SUCCESS_BAR_COLOR = { red = 120, green = 255, blue = 170 }
+local INTERRUPT_BAR_COLOR = { red = 255, green = 120, blue = 120 }
+local WHITE = { red = 255, green = 255, blue = 255 }
+
 local state = {
     addon_settings = nil,
     settings = nil,
@@ -104,8 +128,28 @@ local state = {
     events = {},
     current_cast = nil,
     player_id = nil,
-    dimensions = { width = 300, height = 25 },
+    dimensions = {
+        width = DEFAULT_FRAME_SIZE.width,
+        height = DEFAULT_FRAME_SIZE.height,
+    },
+    bar_dimensions = {
+        width = DEFAULT_BAR_SIZE.width,
+        height = DEFAULT_BAR_SIZE.height,
+    },
+    bar_offset = {
+        x = DEFAULT_BAR_OFFSET.x,
+        y = DEFAULT_BAR_OFFSET.y,
+    },
+    label_offset = LABEL_OFFSET_Y,
     position = { x = 0, y = 0 },
+    colors = {
+        bar = { red = WHITE.red, green = WHITE.green, blue = WHITE.blue },
+        label = {
+            red = DEFAULT_TEXT_COLOR.red,
+            green = DEFAULT_TEXT_COLOR.green,
+            blue = DEFAULT_TEXT_COLOR.blue,
+        },
+    },
 }
 
 local function clamp(value, minimum, maximum)
@@ -150,6 +194,127 @@ local function destroy_objects()
     state.label = nil
 end
 
+local function file_exists(path)
+    if not path or path == '' then
+        return false
+    end
+
+    local file, _ = io.open(windower.addon_path .. path, 'rb')
+    if file then
+        file:close()
+        return true
+    end
+    return false
+end
+
+local function resolve_texture_path(requested, default_path, legacy_path)
+    if requested and requested ~= '' and file_exists(requested) then
+        return requested
+    end
+
+    if legacy_path and requested == legacy_path and file_exists(default_path) then
+        return default_path
+    end
+
+    if default_path and default_path ~= '' and file_exists(default_path) then
+        return default_path
+    end
+
+    -- Fallback to the requested value even if missing so users notice the issue.
+    return requested or default_path or ''
+end
+
+local function resolve_spell_from_action(act)
+    if not act then
+        return nil
+    end
+
+    local function lookup(id)
+        id = tonumber(id)
+        if not id or id == 0 then
+            return nil
+        end
+        return resources.spells[id]
+    end
+
+    local spell = lookup(act.param)
+    if spell then
+        return spell
+    end
+
+    local targets = act.targets
+    if not targets then
+        return nil
+    end
+
+    for _, target in ipairs(targets) do
+        local actions = target.actions
+        if actions then
+            for _, entry in ipairs(actions) do
+                spell = lookup(entry.param or entry.message_param or entry.id)
+                if spell then
+                    return spell
+                end
+            end
+        end
+    end
+
+    return nil
+end
+
+local function copy_color(color)
+    if not color then
+        return { red = 255, green = 255, blue = 255 }
+    end
+
+    return {
+        red = color.red or 255,
+        green = color.green or 255,
+        blue = color.blue or 255,
+    }
+end
+
+local function apply_bar_color(color)
+    if not state.bar or not state.bar.color then
+        return
+    end
+
+    color = copy_color(color)
+    state.bar:color(color.red, color.green, color.blue)
+    state.colors.bar = color
+end
+
+local function apply_label_color(color)
+    if not state.label or not state.label.color then
+        return
+    end
+
+    color = copy_color(color)
+    state.label:color(color.red, color.green, color.blue)
+    state.colors.label = color
+end
+
+local function set_alpha(alpha)
+    alpha = clamp(alpha or 1, 0, 1)
+    local value = math.floor((alpha * 255) + 0.5)
+
+    if state.frame and state.frame.alpha then
+        state.frame:alpha(value)
+    end
+    if state.bar and state.bar.alpha then
+        state.bar:alpha(value)
+    end
+    if state.label and state.label.alpha then
+        state.label:alpha(value)
+    end
+end
+
+local function reset_visual_state()
+    apply_bar_color(WHITE)
+    apply_label_color(DEFAULT_TEXT_COLOR)
+    set_alpha(1)
+end
+
 local function hide_objects()
     if state.bar and state.bar.hide then
         state.bar:hide()
@@ -163,6 +328,7 @@ local function hide_objects()
 end
 
 local function clear_cast()
+    reset_visual_state()
     state.current_cast = nil
     hide_objects()
 end
@@ -203,21 +369,54 @@ local function ensure_objects()
         stroke = { width = 2, alpha = 180 },
     })
     if state.label.alignment then
-        state.label:alignment('center')
+        state.label:alignment('left')
     end
+    if state.label.right_justified then
+        state.label:right_justified(false)
+    end
+    if state.label.bottom_justified then
+        state.label:bottom_justified(false)
+    end
+    apply_label_color(DEFAULT_TEXT_COLOR)
     state.label:hide()
 end
 
 local function resolve_dimensions(config)
+    config = config or {}
     local size = config.size or {}
-    local width = tonumber(size.width) or tonumber(size[1]) or 300
-    local height = tonumber(size.height) or tonumber(size[2]) or 25
 
-    width = clamp(math.floor(width + 0.5), 50)
-    height = clamp(math.floor(height + 0.5), 10)
+    local explicit_scale = tonumber(config.scale)
+    local width_config = tonumber(size.width) or tonumber(size[1])
+    local height_config = tonumber(size.height) or tonumber(size[2])
+
+    local scale = explicit_scale
+    if not scale or scale <= 0 then
+        if width_config and width_config > 0 then
+            scale = width_config / DEFAULT_FRAME_SIZE.width
+        elseif height_config and height_config > 0 then
+            scale = height_config / DEFAULT_FRAME_SIZE.height
+        end
+    end
+
+    if not scale or scale <= 0 then
+        scale = 1
+    end
+
+    scale = clamp(scale, 0.25, 5)
+
+    local width = math.floor((DEFAULT_FRAME_SIZE.width * scale) + 0.5)
+    local height = math.floor((DEFAULT_FRAME_SIZE.height * scale) + 0.5)
+
+    local scale_x = width / DEFAULT_FRAME_SIZE.width
+    local scale_y = height / DEFAULT_FRAME_SIZE.height
 
     state.dimensions.width = width
     state.dimensions.height = height
+    state.bar_dimensions.width = math.max(1, math.floor((DEFAULT_BAR_SIZE.width * scale_x) + 0.5))
+    state.bar_dimensions.height = math.max(1, math.floor((DEFAULT_BAR_SIZE.height * scale_y) + 0.5))
+    state.bar_offset.x = math.floor((DEFAULT_BAR_OFFSET.x * scale_x) + 0.5)
+    state.bar_offset.y = math.floor((DEFAULT_BAR_OFFSET.y * scale_y) + 0.5)
+    state.label_offset = math.max(1, math.floor((LABEL_OFFSET_Y * scale_y) + 0.5))
 
     return width, height
 end
@@ -236,9 +435,15 @@ local function resolve_position(config, width, height)
         offset_x = converted and converted.x or offset_x
         offset_y = converted and converted.y or offset_y
     end
+    local base_x = math.floor(((screen_w - width) / 2) + 0.5)
+    local base_y = math.floor(((screen_h * (2 / 3)) - (height / 2)) + 0.5)
 
-    local pos_x = math.floor((screen_w / 2) - (width / 2) + offset_x + 0.5)
-    local pos_y = math.floor((screen_h / 2) + offset_y + 0.5)
+    if screen_h > 0 then
+        base_y = clamp(base_y, 0, screen_h - height)
+    end
+
+    local pos_x = math.floor(base_x + offset_x + 0.5)
+    local pos_y = math.floor(base_y + offset_y + 0.5)
 
     return pos_x, pos_y
 end
@@ -249,21 +454,26 @@ local function apply_visual_settings(config)
     local width, height = resolve_dimensions(config)
     local pos_x, pos_y = resolve_position(config, width, height)
 
-    local frame_path = config.image_frame or 'gui/ezcastbar/castbar_frame.png'
-    local bar_path = config.image_bar or 'gui/ezcastbar/castbar_bar.png'
+    local frame_path = resolve_texture_path(config.image_frame, DEFAULT_FRAME_PATH, LEGACY_FRAME_PATH)
+    local bar_path = resolve_texture_path(config.image_bar, DEFAULT_BAR_PATH, LEGACY_BAR_PATH)
 
-    if state.frame.path then
+    if state.settings then
+        state.settings.image_frame = frame_path
+        state.settings.image_bar = bar_path
+    end
+
+    if state.frame.path and frame_path and frame_path ~= '' then
         state.frame:path(windower.addon_path .. frame_path)
     end
     state.frame:size(width, height)
     state.frame:pos(pos_x, pos_y)
     state.frame:hide()
 
-    if state.bar.path then
+    if state.bar.path and bar_path and bar_path ~= '' then
         state.bar:path(windower.addon_path .. bar_path)
     end
-    state.bar:size(1, height)
-    state.bar:pos(pos_x, pos_y)
+    state.bar:size(state.bar_dimensions.width, state.bar_dimensions.height)
+    state.bar:pos(pos_x + state.bar_offset.x, pos_y + state.bar_offset.y)
     state.bar:hide()
 
     state.position.x = pos_x
@@ -271,9 +481,19 @@ local function apply_visual_settings(config)
 
     if state.label then
         state.label:text('')
-        state.label:pos(pos_x + width / 2, pos_y + (height / 2) - 10)
+        if state.label.size then
+            local scale_y = state.dimensions.height / DEFAULT_FRAME_SIZE.height
+            local font_size = math.max(12, math.floor((18 * scale_y) + 0.5))
+            state.label:size(font_size)
+        end
+        if state.label.bold then
+            state.label:bold(true)
+        end
+        state.label:pos(pos_x, pos_y - state.label_offset)
         state.label:hide()
     end
+
+    reset_visual_state()
 end
 
 local function ensure_enabled()
@@ -290,6 +510,76 @@ local function show_cast(name)
     end
 
     ensure_objects()
+    reset_visual_state()
+
+    if state.label then
+        state.label:text(name or '')
+        if state.label.bold then
+            state.label:bold(true)
+        end
+        state.label:pos(state.position.x, state.position.y - state.label_offset)
+        state.label:show()
+    end
+
+    if state.frame and state.frame.show then
+        state.frame:show()
+    end
+end
+
+local function set_bar_progress(progress)
+    if not state.bar then
+        return
+    end
+
+    progress = clamp(progress or 0, 0, 1)
+    local width = math.floor((state.bar_dimensions.width * progress) + 0.5)
+    state.bar:pos(state.position.x + state.bar_offset.x, state.position.y + state.bar_offset.y)
+
+    if width <= 0 then
+        state.bar:size(1, state.bar_dimensions.height)
+        if state.bar.hide then
+            state.bar:hide()
+        end
+        return
+    end
+
+    state.bar:size(width, state.bar_dimensions.height)
+    if state.bar.show then
+        state.bar:show()
+    end
+end
+
+local function finish_cast(is_success)
+    if not state.current_cast then
+        return
+    end
+
+    local cast = state.current_cast
+    if cast.phase == 'finishing' or cast.phase == 'interrupted' then
+        if is_success and not cast.success then
+            cast.success = true
+            apply_bar_color(SUCCESS_BAR_COLOR)
+            apply_label_color(SUCCESS_TEXT_COLOR)
+        end
+        return
+    end
+
+    cast.phase = 'finishing'
+    cast.success = is_success and true or false
+    cast.fade_start = os.clock()
+    cast.fade_duration = (state.settings and tonumber(state.settings.fade_duration)) or DEFAULT_FADE_DURATION
+    cast.fade_hold = FADE_HOLD_DURATION
+
+    set_bar_progress(1)
+    set_alpha(1)
+
+    if cast.success then
+        apply_bar_color(SUCCESS_BAR_COLOR)
+        apply_label_color(SUCCESS_TEXT_COLOR)
+    else
+        apply_bar_color(WHITE)
+        apply_label_color(DEFAULT_TEXT_COLOR)
+    end
 
     if state.frame and state.frame.show then
         state.frame:show()
@@ -298,26 +588,8 @@ local function show_cast(name)
         state.bar:show()
     end
     if state.label then
-        state.label:text(name or '')
         state.label:show()
     end
-end
-
-local function finish_cast()
-    clear_cast()
-end
-
-local function set_bar_progress(progress)
-    if not state.bar then
-        return
-    end
-
-    local width = clamp(progress, 0, 1) * state.dimensions.width
-    local height = state.dimensions.height
-    width = math.max(math.floor(width + 0.5), 1)
-
-    state.bar:pos(state.position.x, state.position.y)
-    state.bar:size(width, height)
 end
 
 local function start_cast(spell_id, spell_name, duration)
@@ -330,6 +602,10 @@ local function start_cast(spell_id, spell_name, duration)
         duration = 1
     end
 
+    if state.current_cast then
+        clear_cast()
+    end
+
     local now = os.clock()
     state.current_cast = {
         spell_id = spell_id,
@@ -337,6 +613,11 @@ local function start_cast(spell_id, spell_name, duration)
         start_time = now,
         end_time = now + duration,
         duration = duration,
+        phase = 'casting',
+        success = false,
+        fade_start = nil,
+        fade_duration = nil,
+        fade_hold = 0,
     }
 
     show_cast(state.current_cast.name)
@@ -344,7 +625,34 @@ local function start_cast(spell_id, spell_name, duration)
 end
 
 local function interrupt_cast()
-    clear_cast()
+    if not state.current_cast then
+        return
+    end
+
+    local cast = state.current_cast
+    if cast.phase == 'finishing' and cast.success then
+        return
+    end
+
+    cast.phase = 'interrupted'
+    cast.success = false
+    cast.fade_start = os.clock()
+    cast.fade_duration = (state.settings and tonumber(state.settings.fade_duration)) or DEFAULT_FADE_DURATION
+    cast.fade_hold = 0
+
+    set_alpha(1)
+    apply_bar_color(INTERRUPT_BAR_COLOR)
+    apply_label_color(INTERRUPT_TEXT_COLOR)
+
+    if state.frame and state.frame.show then
+        state.frame:show()
+    end
+    if state.bar and state.bar.show then
+        state.bar:show()
+    end
+    if state.label then
+        state.label:show()
+    end
 end
 
 local function on_action(act)
@@ -356,13 +664,36 @@ local function on_action(act)
         return
     end
 
+    local category = act.category
+
+    if category == ACTION_CATEGORY_MAGIC_START then
+        if act.param == INTERRUPT_PARAM then
+            interrupt_cast()
+            return
+        end
+
+        local spell = resolve_spell_from_action(act)
+        if not spell then
+            return
+        end
+
+        local duration = tonumber(spell.cast_time) or 0
+        if duration > 10 then
+            duration = duration / 60
+        end
+
+        start_cast(spell.id, spell.en, duration)
+        return
+    end
+
     if not state.current_cast then
         return
     end
 
-    -- Categories for completed magic actions.
-    if act.category == 8 or act.category == 15 or act.category == 6 then
-        finish_cast()
+    if category == ACTION_CATEGORY_MAGIC_FINISH
+        or category == ACTION_CATEGORY_JA_FINISH
+        or category == ACTION_CATEGORY_WS_FINISH then
+        finish_cast(true)
     end
 end
 
@@ -382,37 +713,6 @@ local function on_action_message(target_id, actor_id, message_id)
     if INTERRUPT_MESSAGES[message_id] then
         interrupt_cast()
     end
-end
-
-local function on_outgoing_chunk(id, data)
-    if id ~= 0x037 then
-        return
-    end
-
-    if not ensure_enabled() then
-        return
-    end
-
-    local packet = packets.parse('outgoing', data)
-    if not packet or packet.id ~= 0x037 then
-        return
-    end
-
-    local spell_id = packet.Spell or packet.SpellID or packet['Spell']
-    if not spell_id then
-        return
-    end
-
-    local spell = resources.spells[spell_id]
-    local name = spell and spell.en or ('Spell #' .. tostring(spell_id))
-    local duration = spell and spell.cast_time or 0
-
-    -- Convert cast time from seconds*60 (resource units) to seconds when needed.
-    if duration and duration > 0 and duration > 10 then
-        duration = duration / 60
-    end
-
-    start_cast(spell_id, name, duration)
 end
 
 local function on_login()
@@ -437,7 +737,6 @@ local function update_events()
 
     state.events.action = windower.register_event('action', on_action)
     state.events.action_message = windower.register_event('action message', on_action_message)
-    state.events.outgoing = windower.register_event('outgoing chunk', on_outgoing_chunk)
     state.events.load = windower.register_event('load', on_login)
     state.events.login = windower.register_event('login', on_login)
     state.events.zone = windower.register_event('zone change', on_zone_change)
@@ -471,21 +770,52 @@ function ezcastbar.update()
         return
     end
 
-    local now = os.clock()
     local cast = state.current_cast
-    local duration = cast.duration or 0
-    if duration <= 0 then
-        finish_cast()
+    local now = os.clock()
+
+    if cast.phase == 'casting' then
+        local duration = cast.duration or 0
+        if duration <= 0 then
+            finish_cast(true)
+            return
+        end
+
+        local elapsed = now - cast.start_time
+        local progress = clamp(elapsed / duration, 0, 1)
+        set_bar_progress(progress)
+
+        if elapsed >= duration then
+            finish_cast(true)
+        end
         return
     end
 
-    if now >= cast.end_time then
-        finish_cast()
-        return
-    end
+    if cast.phase == 'finishing' or cast.phase == 'interrupted' then
+        local fade_start = cast.fade_start or now
+        local fade_duration = cast.fade_duration or DEFAULT_FADE_DURATION
+        local elapsed = now - fade_start
+        local hold = cast.fade_hold or 0
 
-    local progress = (now - cast.start_time) / duration
-    set_bar_progress(progress)
+        if elapsed < hold then
+            set_alpha(1)
+            return
+        end
+
+        local fade_elapsed = elapsed - hold
+
+        if fade_duration <= 0 then
+            clear_cast()
+            return
+        end
+
+        if fade_elapsed >= fade_duration then
+            clear_cast()
+            return
+        end
+
+        local alpha = clamp(1 - (fade_elapsed / fade_duration), 0, 1)
+        set_alpha(alpha)
+    end
 end
 
 function ezcastbar.destroy()
