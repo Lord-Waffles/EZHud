@@ -37,8 +37,8 @@ require('math')
 
 local HOVER_TEXTURE = 'gui/ezparty/ezmount_hover.png'
 local PRESSED_TEXTURE = 'gui/ezparty/ezmount_click.png'
-local TEXTURE_WIDTH = 290
-local TEXTURE_HEIGHT = 337
+local TEXTURE_WIDTH = 128
+local TEXTURE_HEIGHT = 150
 
 local buttons = {
     player_one = {},
@@ -281,14 +281,13 @@ local function apply_geometry(button, frame_info)
     local base_height = math.max(frame_info.base_height or 0, 0)
     local base_width = math.max(frame_info.base_width or 0, 0)
 
-    local scale_factor = 0
-    if base_height > 0 then
-        scale_factor = frame_height / base_height
-    elseif base_width > 0 then
-        scale_factor = frame_width / base_width
-    end
+    local scale_factor = tonumber(frame_info.scale) or 0
     if scale_factor <= 0 then
-        scale_factor = tonumber(frame_info.scale) or 1
+        if base_height > 0 then
+            scale_factor = frame_height / base_height
+        elseif base_width > 0 then
+            scale_factor = frame_width / base_width
+        end
     end
     if scale_factor <= 0 then
         scale_factor = frame_height / TEXTURE_HEIGHT
