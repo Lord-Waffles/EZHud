@@ -39,6 +39,7 @@ local ezparty = require('modules.ezparty.ezparty')
 local ezmount = require('modules.ezmount.ezmount')
 local ezcastbar = require('modules.ezcastbar.ezcastbar')
 local ezgui_creator = require('modules.ezgui_creator.ezgui_creator')
+local theme_manager = require('core.theme_manager')
 local ezdefaults = require('core.ezdefaults') or {}
 require('tables')
 require('strings')
@@ -83,6 +84,42 @@ windower.register_event('addon command', function(command, ...)
             ezgui_creator.close()
         else
             ezgui_creator.toggle()
+        end
+        return
+    end
+
+    if command == 'load' then
+        local theme_name = args[1]
+        if not theme_name then
+            windower.add_to_chat(123, 'Usage: //ez load <theme>')
+            return
+        end
+
+        local success, message = theme_manager.load(theme_name, addon_settings)
+        if success then
+            ezparty.init(addon_settings)
+            ezgui_creator.init(addon_settings)
+            ezmount.init(addon_settings)
+            ezcastbar.init(addon_settings)
+            windower.add_to_chat(207, message)
+        else
+            windower.add_to_chat(123, message)
+        end
+        return
+    end
+
+    if command == 'export' then
+        local theme_name = args[1]
+        if not theme_name then
+            windower.add_to_chat(123, 'Usage: //ez export <theme>')
+            return
+        end
+
+        local success, message = theme_manager.export(theme_name, addon_settings)
+        if success then
+            windower.add_to_chat(207, string.format('Theme exported to %s.', message))
+        else
+            windower.add_to_chat(123, message)
         end
         return
     end
