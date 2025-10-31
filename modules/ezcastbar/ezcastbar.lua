@@ -109,6 +109,8 @@ local DEFAULT_BAR_SIZE = { width = 346, height = 9 }
 local DEFAULT_BAR_OFFSET = { x = 2, y = 2 }
 local DEFAULT_FADE_DURATION = 0.6
 local LABEL_OFFSET_Y = 24
+local FEEDBACK_OFFSET_Y = 18
+local FEEDBACK_FADE_DURATION = 1.0
 local FADE_HOLD_DURATION = 0.2
 
 local DEFAULT_TEXT_COLOR = { red = 120, green = 210, blue = 255 }
@@ -116,6 +118,7 @@ local SUCCESS_TEXT_COLOR = { red = 140, green = 255, blue = 180 }
 local INTERRUPT_TEXT_COLOR = { red = 255, green = 145, blue = 145 }
 local SUCCESS_BAR_COLOR = { red = 120, green = 255, blue = 170 }
 local INTERRUPT_BAR_COLOR = { red = 255, green = 120, blue = 120 }
+local FEEDBACK_TEXT_COLOR = { red = 255, green = 230, blue = 120 }
 local WHITE = { red = 255, green = 255, blue = 255 }
 
 local state = {
@@ -126,6 +129,7 @@ local state = {
     frame = nil,
     bar = nil,
     label = nil,
+    feedback_label = nil,
     events = {},
     current_cast = nil,
     player_id = nil,
@@ -142,6 +146,7 @@ local state = {
         y = DEFAULT_BAR_OFFSET.y,
     },
     label_offset = LABEL_OFFSET_Y,
+    feedback_offset = FEEDBACK_OFFSET_Y,
     position = { x = 0, y = 0 },
     colors = {
         bar = { red = WHITE.red, green = WHITE.green, blue = WHITE.blue },
@@ -150,7 +155,13 @@ local state = {
             green = DEFAULT_TEXT_COLOR.green,
             blue = DEFAULT_TEXT_COLOR.blue,
         },
+        feedback = {
+            red = FEEDBACK_TEXT_COLOR.red,
+            green = FEEDBACK_TEXT_COLOR.green,
+            blue = FEEDBACK_TEXT_COLOR.blue,
+        },
     },
+    feedback = nil,
 }
 
 local function clamp(value, minimum, maximum)
@@ -189,10 +200,15 @@ local function destroy_objects()
     if state.label and state.label.destroy then
         state.label:destroy()
     end
+    if state.feedback_label and state.feedback_label.destroy then
+        state.feedback_label:destroy()
+    end
 
     state.frame = nil
     state.bar = nil
     state.label = nil
+    state.feedback_label = nil
+    state.feedback = nil
 end
 
 local function file_exists(path)
@@ -295,6 +311,16 @@ local function apply_label_color(color)
     state.colors.label = color
 end
 
+local function apply_feedback_color(color)
+    if not state.feedback_label or not state.feedback_label.color then
+        return
+    end
+
+    color = copy_color(color or FEEDBACK_TEXT_COLOR)
+    state.feedback_label:color(color.red, color.green, color.blue)
+    state.colors.feedback = color
+end
+
 local function set_alpha(alpha)
     alpha = clamp(alpha or 1, 0, 1)
     local value = math.floor((alpha * 255) + 0.5)
@@ -326,11 +352,30 @@ local function hide_objects()
     if state.label and state.label.hide then
         state.label:hide()
     end
+    if state.feedback_label and state.feedback_label.hide then
+        state.feedback_label:hide()
+    end
+end
+
+local function clear_feedback()
+    state.feedback = nil
+    if state.feedback_label then
+        if state.feedback_label.text then
+            state.feedback_label:text('')
+        end
+        if state.feedback_label.alpha then
+            state.feedback_label:alpha(0)
+        end
+        if state.feedback_label.hide then
+            state.feedback_label:hide()
+        end
+    end
 end
 
 local function clear_cast()
     reset_visual_state()
     state.current_cast = nil
+    clear_feedback()
     hide_objects()
 end
 
@@ -340,51 +385,79 @@ local function ensure_player_id()
 end
 
 local function ensure_objects()
-    if state.frame and state.bar then
-        return
+    if not state.frame then
+        state.frame = images.new({
+            size = { width = 1, height = 1 },
+            texture = { path = '' },
+            color = { red = 255, green = 255, blue = 255, alpha = 255 },
+            draggable = false,
+            visible = false,
+            priority = 8,
+        })
     end
 
-    state.frame = images.new({
-        size = { width = 1, height = 1 },
-        texture = { path = '' },
-        color = { red = 255, green = 255, blue = 255, alpha = 255 },
-        draggable = false,
-        visible = false,
-        priority = 8,
-    })
+    if not state.bar then
+        state.bar = images.new({
+            size = { width = 1, height = 1 },
+            texture = { path = '' },
+            color = { red = 255, green = 255, blue = 255, alpha = 255 },
+            draggable = false,
+            visible = false,
+            priority = 9,
+        })
+    end
 
-    state.bar = images.new({
-        size = { width = 1, height = 1 },
-        texture = { path = '' },
-        color = { red = 255, green = 255, blue = 255, alpha = 255 },
-        draggable = false,
-        visible = false,
-        priority = 9,
-    })
+    if not state.label then
+        state.label = texts.new('', {
+            font = 'Arial',
+            size = 12,
+            bold = true,
+            draggable = false,
+            bg = { alpha = 0 },
+            flags = { right = false, bottom = false },
+            stroke = { width = 2, alpha = 180 },
+        })
+        if state.label.alignment then
+            state.label:alignment('left')
+        end
+        if state.label.right_justified then
+            state.label:right_justified(false)
+        end
+        if state.label.bottom_justified then
+            state.label:bottom_justified(false)
+        end
+        if state.label.priority then
+            state.label:priority(10)
+        end
+        apply_label_color(DEFAULT_TEXT_COLOR)
+        state.label:hide()
+    end
 
-    state.label = texts.new('', {
-        font = 'Arial',
-        size = 12,
-        bold = true,
-        draggable = false,
-        bg = { alpha = 0 },
-        flags = { right = false, bottom = false },
-        stroke = { width = 2, alpha = 180 },
-    })
-    if state.label.alignment then
-        state.label:alignment('left')
+    if not state.feedback_label then
+        state.feedback_label = texts.new('', {
+            font = 'Arial',
+            size = 12,
+            bold = true,
+            draggable = false,
+            bg = { alpha = 0 },
+            flags = { right = false, bottom = false },
+            stroke = { width = 2, alpha = 160 },
+        })
+        if state.feedback_label.alignment then
+            state.feedback_label:alignment('left')
+        end
+        if state.feedback_label.right_justified then
+            state.feedback_label:right_justified(false)
+        end
+        if state.feedback_label.bottom_justified then
+            state.feedback_label:bottom_justified(false)
+        end
+        if state.feedback_label.priority then
+            state.feedback_label:priority(10)
+        end
+        apply_feedback_color(FEEDBACK_TEXT_COLOR)
+        state.feedback_label:hide()
     end
-    if state.label.right_justified then
-        state.label:right_justified(false)
-    end
-    if state.label.bottom_justified then
-        state.label:bottom_justified(false)
-    end
-    if state.label.priority then
-        state.label:priority(10)
-    end
-    apply_label_color(DEFAULT_TEXT_COLOR)
-    state.label:hide()
 end
 
 local function resolve_dimensions(config)
@@ -419,10 +492,11 @@ local function resolve_dimensions(config)
     state.dimensions.width = width
     state.dimensions.height = height
     state.bar_dimensions.width = math.max(1, math.floor((DEFAULT_BAR_SIZE.width * scale_x) + 0.5))
-    state.bar_dimensions.height = math.max(1, math.floor((DEFAULT_BAR_SIZE.height * scale_y) + 0.5))
-    state.bar_offset.x = math.floor((DEFAULT_BAR_OFFSET.x * scale_x) + 0.5)
-    state.bar_offset.y = math.floor((DEFAULT_BAR_OFFSET.y * scale_y) + 0.5)
-    state.label_offset = math.max(1, math.floor((LABEL_OFFSET_Y * scale_y) + 0.5))
+   state.bar_dimensions.height = math.max(1, math.floor((DEFAULT_BAR_SIZE.height * scale_y) + 0.5))
+   state.bar_offset.x = math.floor((DEFAULT_BAR_OFFSET.x * scale_x) + 0.5)
+   state.bar_offset.y = math.floor((DEFAULT_BAR_OFFSET.y * scale_y) + 0.5)
+   state.label_offset = math.max(1, math.floor((LABEL_OFFSET_Y * scale_y) + 0.5))
+    state.feedback_offset = math.max(1, math.floor((FEEDBACK_OFFSET_Y * scale_y) + 0.5))
 
     return width, height
 end
@@ -485,10 +559,11 @@ local function apply_visual_settings(config)
     state.position.x = pos_x
     state.position.y = pos_y
 
+    local scale_y = state.dimensions.height / DEFAULT_FRAME_SIZE.height
+
     if state.label then
         state.label:text('')
         if state.label.size then
-            local scale_y = state.dimensions.height / DEFAULT_FRAME_SIZE.height
             local font_size = math.max(12, math.floor((18 * scale_y) + 0.5))
             state.label:size(font_size)
         end
@@ -497,6 +572,22 @@ local function apply_visual_settings(config)
         end
         state.label:pos(pos_x + state.bar_offset.x, pos_y - state.label_offset)
         state.label:hide()
+    end
+
+    if state.feedback_label then
+        state.feedback_label:text('')
+        if state.feedback_label.size then
+            local font_size = math.max(12, math.floor((16 * scale_y) + 0.5))
+            state.feedback_label:size(font_size)
+        end
+        if state.feedback_label.bold then
+            state.feedback_label:bold(true)
+        end
+        state.feedback_label:pos(pos_x + state.bar_offset.x, pos_y + state.dimensions.height + state.feedback_offset)
+        if state.feedback_label.alpha then
+            state.feedback_label:alpha(0)
+        end
+        state.feedback_label:hide()
     end
 
     reset_visual_state()
@@ -555,6 +646,78 @@ local function set_bar_progress(progress)
     end
 end
 
+local function show_feedback(message)
+    if not message or message == '' then
+        return
+    end
+
+    ensure_objects()
+
+    local formatted = string.format('- %s -', message)
+    state.feedback = {
+        text = formatted,
+        start_time = os.clock(),
+        duration = FEEDBACK_FADE_DURATION,
+        reason = message,
+    }
+
+    if state.feedback_label then
+        state.feedback_label:text(formatted)
+        apply_feedback_color(FEEDBACK_TEXT_COLOR)
+        if state.feedback_label.bold then
+            state.feedback_label:bold(true)
+        end
+        if state.feedback_label.pos then
+            state.feedback_label:pos(
+                state.position.x + state.bar_offset.x,
+                state.position.y + state.dimensions.height + state.feedback_offset
+            )
+        end
+        if state.feedback_label.alpha then
+            state.feedback_label:alpha(255)
+        end
+        if state.feedback_label.show then
+            state.feedback_label:show()
+        end
+    end
+end
+
+local function update_feedback()
+    if not state.feedback then
+        return
+    end
+
+    local label = state.feedback_label
+    if not label then
+        state.feedback = nil
+        return
+    end
+
+    local duration = state.feedback.duration or FEEDBACK_FADE_DURATION
+    if duration <= 0 then
+        clear_feedback()
+        return
+    end
+
+    if label.pos then
+        label:pos(
+            state.position.x + state.bar_offset.x,
+            state.position.y + state.dimensions.height + state.feedback_offset
+        )
+    end
+
+    local elapsed = os.clock() - (state.feedback.start_time or 0)
+    if elapsed >= duration then
+        clear_feedback()
+        return
+    end
+
+    local alpha = clamp(1 - (elapsed / duration), 0, 1)
+    if label.alpha then
+        label:alpha(math.floor((alpha * 255) + 0.5))
+    end
+end
+
 local function finish_cast(is_success)
     if not state.current_cast then
         return
@@ -573,8 +736,14 @@ local function finish_cast(is_success)
     cast.phase = 'finishing'
     cast.success = is_success and true or false
     cast.fade_start = os.clock()
-    cast.fade_duration = (state.settings and tonumber(state.settings.fade_duration)) or DEFAULT_FADE_DURATION
-    cast.fade_hold = FADE_HOLD_DURATION
+    local configured_fade = (state.settings and tonumber(state.settings.fade_duration)) or DEFAULT_FADE_DURATION
+    if cast.success then
+        cast.fade_duration = configured_fade
+        cast.fade_hold = FADE_HOLD_DURATION
+    else
+        cast.fade_duration = math.max(configured_fade, FEEDBACK_FADE_DURATION)
+        cast.fade_hold = 0
+    end
 
     set_bar_progress(1)
     set_alpha(1)
@@ -628,13 +797,14 @@ local function start_cast(spell_id, spell_name, duration)
         fade_start = nil,
         fade_duration = nil,
         fade_hold = 0,
+        feedback_reason = nil,
     }
 
     show_cast(state.current_cast.name)
     set_bar_progress(0)
 end
 
-local function interrupt_cast()
+local function interrupt_cast(reason)
     if not state.current_cast then
         return
     end
@@ -643,16 +813,27 @@ local function interrupt_cast()
     if cast.phase == 'finishing' and cast.success then
         return
     end
+    if cast.phase == 'interrupted' and cast.feedback_reason == reason then
+        return
+    end
 
     cast.phase = 'interrupted'
     cast.success = false
     cast.fade_start = os.clock()
-    cast.fade_duration = (state.settings and tonumber(state.settings.fade_duration)) or DEFAULT_FADE_DURATION
+    local configured_fade = (state.settings and tonumber(state.settings.fade_duration)) or DEFAULT_FADE_DURATION
+    cast.fade_duration = math.max(configured_fade, FEEDBACK_FADE_DURATION)
     cast.fade_hold = 0
+    cast.feedback_reason = reason
 
     set_alpha(1)
     apply_bar_color(INTERRUPT_BAR_COLOR)
     apply_label_color(INTERRUPT_TEXT_COLOR)
+
+    if reason and reason ~= '' then
+        show_feedback(reason)
+    else
+        show_feedback('Spell Interrupted')
+    end
 
     if state.frame and state.frame.show then
         state.frame:show()
@@ -663,6 +844,88 @@ local function interrupt_cast()
     if state.label then
         state.label:show()
     end
+end
+
+local function resolve_action_message_text(message_id)
+    if not message_id then
+        return nil
+    end
+
+    local entry = resources.action_messages[message_id]
+    if not entry then
+        return nil
+    end
+
+    local text = entry.en
+    if type(text) == 'table' then
+        text = text[1]
+    end
+
+    return text
+end
+
+local function classify_action_message(message_id)
+    local text = resolve_action_message_text(message_id)
+    if not text or text == '' then
+        return nil
+    end
+
+    local lowered = text:lower()
+    lowered = lowered:gsub('<[^>]+>', '')
+    lowered = lowered:gsub('%s+', ' ')
+
+    local contains_resist = lowered:find('resist') and not lowered:find('resistance')
+
+    if contains_resist or lowered:find('resists') or lowered:find('resisted') or lowered:find('no effect') or lowered:find('fails to take effect') or lowered:find('is immune') then
+        return 'resisted'
+    end
+
+    if lowered:find('unable to cast') or lowered:find('fails to cast') or lowered:find('cannot cast') or lowered:find('fails to activate') or lowered:find('too far away') or lowered:find('out of range') or lowered:find('no target') or lowered:find('insufficient') then
+        return 'failed'
+    end
+
+    if lowered:find('interrupt') or lowered:find('canceled') or lowered:find('cancelled') then
+        return 'interrupted'
+    end
+
+    return nil
+end
+
+local function determine_magic_finish_result(act)
+    if not act or not act.targets then
+        return nil
+    end
+
+    local result = nil
+
+    for _, target in ipairs(act.targets) do
+        local actions = target.actions
+        if actions then
+            for _, entry in ipairs(actions) do
+                local classification = classify_action_message(entry.message)
+                if classification == 'resisted' then
+                    return 'resisted'
+                elseif classification == 'failed' then
+                    result = 'failed'
+                elseif classification == 'interrupted' and result ~= 'failed' then
+                    result = 'interrupted'
+                end
+            end
+        end
+    end
+
+    return result
+end
+
+local function interrupt_reason_from_message(message_id)
+    local classification = classify_action_message(message_id)
+    if classification == 'failed' then
+        return 'Spell failed to cast'
+    end
+    if classification == 'resisted' then
+        return 'Spell was resisted'
+    end
+    return 'Spell Interrupted'
 end
 
 local function on_action(act)
@@ -682,7 +945,7 @@ local function on_action(act)
 
     if category == ACTION_CATEGORY_MAGIC_START then
         if act.param == INTERRUPT_PARAM then
-            interrupt_cast()
+            interrupt_cast('Spell Interrupted')
             return
         end
 
@@ -704,8 +967,25 @@ local function on_action(act)
         return
     end
 
-    if category == ACTION_CATEGORY_MAGIC_FINISH
-        or category == ACTION_CATEGORY_JA_FINISH
+    if category == ACTION_CATEGORY_MAGIC_FINISH then
+        local result = determine_magic_finish_result(act)
+        if result == 'resisted' then
+            finish_cast(false)
+            show_feedback('Spell was resisted')
+            return
+        elseif result == 'failed' then
+            finish_cast(false)
+            show_feedback('Spell failed to cast')
+            return
+        elseif result == 'interrupted' then
+            interrupt_cast('Spell Interrupted')
+            return
+        end
+        finish_cast(true)
+        return
+    end
+
+    if category == ACTION_CATEGORY_JA_FINISH
         or category == ACTION_CATEGORY_WS_FINISH then
         finish_cast(true)
     end
@@ -729,7 +1009,7 @@ local function on_action_message(target_id, actor_id, message_id)
     end
 
     if INTERRUPT_MESSAGES[message_id] then
-        interrupt_cast()
+        interrupt_cast(interrupt_reason_from_message(message_id))
     end
 end
 
@@ -806,11 +1086,17 @@ function ezcastbar.update()
         return
     end
 
-    if not state.current_cast or not ensure_enabled() then
+    update_feedback()
+
+    if not ensure_enabled() then
         return
     end
 
     local cast = state.current_cast
+    if not cast then
+        return
+    end
+
     local now = os.clock()
 
     if cast.phase == 'casting' then

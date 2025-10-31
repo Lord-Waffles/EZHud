@@ -284,29 +284,30 @@ local function resolve_frame_scale(frame_info)
         return 1
     end
 
+    local base_width = tonumber(frame_info.base_width) or 0
+    local width = tonumber(frame_info.width) or 0
+    if base_width > 0 and width > 0 then
+        local width_scale = width / base_width
+        if width_scale > 0 then
+            return width_scale
+        end
+    end
+
+    local base_height = tonumber(frame_info.base_height) or 0
+    local height = tonumber(frame_info.height) or 0
+    if base_height > 0 and height > 0 then
+        local height_scale = height / base_height
+        if height_scale > 0 then
+            return height_scale
+        end
+    end
+
     local scale = tonumber(frame_info.scale) or 0
-
-    if scale <= 0 then
-        local base_width = tonumber(frame_info.base_width) or 0
-        local width = tonumber(frame_info.width) or 0
-        if base_width > 0 and width > 0 then
-            scale = width / base_width
-        end
+    if scale > 0 then
+        return scale
     end
 
-    if scale <= 0 then
-        local base_height = tonumber(frame_info.base_height) or 0
-        local height = tonumber(frame_info.height) or 0
-        if base_height > 0 and height > 0 then
-            scale = height / base_height
-        end
-    end
-
-    if scale <= 0 then
-        scale = 1
-    end
-
-    return scale
+    return 1
 end
 
 local function apply_geometry(button, frame_info)
@@ -317,18 +318,18 @@ local function apply_geometry(button, frame_info)
     ensure_button_objects(button)
 
     local scale = resolve_frame_scale(frame_info)
-    local base_width = math.max(frame_info.base_width or 0, 0)
-    local base_height = math.max(frame_info.base_height or 0, 0)
+    local frame_width = math.max(tonumber(frame_info.width) or 0, 0)
+    local frame_height = math.max(tonumber(frame_info.height) or 0, 0)
 
-    if base_width <= 0 then
-        base_width = TEXTURE_WIDTH
-    end
-    if base_height <= 0 then
-        base_height = TEXTURE_HEIGHT
-    end
+    local button_width = math.max(math.floor(TEXTURE_WIDTH * scale + 0.5), 1)
+    local button_height = math.max(math.floor(TEXTURE_HEIGHT * scale + 0.5), 1)
 
-    local button_width = math.max(math.floor(base_width * scale + 0.5), 1)
-    local button_height = math.max(math.floor(base_height * scale + 0.5), 1)
+    if frame_width > 0 then
+        button_width = math.min(button_width, frame_width)
+    end
+    if frame_height > 0 then
+        button_height = math.min(button_height, frame_height)
+    end
 
     local button_x = math.floor((frame_info.x or 0) + 0.5)
     local button_y = math.floor((frame_info.y or 0) + 0.5)
