@@ -51,6 +51,7 @@ local last_frames = {
 }
 
 local addon_config
+local ui_visible = true
 local mouse_event_id
 local hovered_button
 local pressed_button
@@ -281,20 +282,48 @@ local function apply_geometry(button, frame_info)
     local base_height = math.max(frame_info.base_height or 0, 0)
     local base_width = math.max(frame_info.base_width or 0, 0)
 
+    -- Derive overlay scaling from the active frame geometry so hover/press states track resolution changes.
     local scale_factor = tonumber(frame_info.scale) or 0
-    if scale_factor <= 0 then
-        if base_height > 0 then
-            scale_factor = frame_height / base_height
-        elseif base_width > 0 then
-            scale_factor = frame_width / base_width
-        end
+    local width_scale = 0
+    local height_scale = 0
+
+    if base_width > 0 then
+        width_scale = frame_width / base_width
     end
-    if scale_factor <= 0 then
-        scale_factor = frame_height / TEXTURE_HEIGHT
+    if base_height > 0 then
+        height_scale = frame_height / base_height
     end
 
-    local button_width = math.max(math.floor(TEXTURE_WIDTH * scale_factor + 0.5), 1)
-    local button_height = math.max(math.floor(TEXTURE_HEIGHT * scale_factor + 0.5), 1)
+    if width_scale <= 0 and scale_factor > 0 then
+        width_scale = scale_factor
+    end
+    if height_scale <= 0 and scale_factor > 0 then
+        height_scale = scale_factor
+    end
+
+    if width_scale <= 0 and frame_width > 0 then
+        width_scale = frame_width / TEXTURE_WIDTH
+    end
+    if height_scale <= 0 and frame_height > 0 then
+        height_scale = frame_height / TEXTURE_HEIGHT
+    end
+
+    if width_scale <= 0 then
+        width_scale = height_scale > 0 and height_scale or 1
+    end
+    if height_scale <= 0 then
+        height_scale = width_scale
+    end
+
+    local button_width = math.max(math.floor(TEXTURE_WIDTH * width_scale + 0.5), 1)
+    local button_height = math.max(math.floor(TEXTURE_HEIGHT * height_scale + 0.5), 1)
+
+    if frame_width > 0 then
+        button_width = math.min(button_width, frame_width)
+    end
+    if frame_height > 0 then
+        button_height = math.min(button_height, frame_height)
+    end
 
     local button_x = math.floor((frame_info.x or 0) + 0.5)
     local button_y = math.floor((frame_info.y or 0) + 0.5)
@@ -492,19 +521,47 @@ function ezmount.init(settings)
         return
     end
 
+    if not ui_visible then
+        return
+    end
+
     apply_frame_positions(settings)
 
     if not geometry_event_id then
         geometry_event_id = windower.register_event('prerender', function()
-            if addon_config and addon_config.ezmount and addon_config.ezmount.enable ~= false then
+            if addon_config
+                and addon_config.ezmount
+                and addon_config.ezmount.enable ~= false
+                and ui_visible
+            then
                 apply_frame_positions(addon_config)
             end
         end)
     end
 end
 
+function ezmount.set_visible(visible)
+    visible = visible ~= false
+
+    if ui_visible == visible then
+        return
+    end
+
+    ui_visible = visible
+
+    if not ui_visible then
+        deactivate()
+        return
+    end
+
+    if addon_config then
+        ezmount.init(addon_config)
+    end
+end
+
 function ezmount.destroy()
     deactivate()
+    ui_visible = true
 end
 
 return ezmount

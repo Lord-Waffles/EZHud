@@ -223,20 +223,18 @@ local function apply_theme_assets(settings, theme_name)
                 end
 
                 if extension and SUPPORTED_ASSET_EXTENSIONS[extension] then
-                    if value:find(THEMES_DIRECTORY .. '/' .. theme_name, 1, true) then
-                        goto continue
-                    end
-
-                    local filename = value:match('([^/\\]+)$')
-                    if filename then
-                        local override_path = string.format('%s/%s/%s', THEMES_DIRECTORY, theme_name, filename)
-                        if file_exists(override_path) then
-                            container[key] = override_path
+                    local already_theme_path = value:find(THEMES_DIRECTORY .. '/' .. theme_name, 1, true)
+                    if not already_theme_path then
+                        local filename = value:match('([^/\\]+)$')
+                        if filename then
+                            local override_path = string.format('%s/%s/%s', THEMES_DIRECTORY, theme_name, filename)
+                            if file_exists(override_path) then
+                                container[key] = override_path
+                            end
                         end
                     end
                 end
             end
-            ::continue::
         end
     end
 

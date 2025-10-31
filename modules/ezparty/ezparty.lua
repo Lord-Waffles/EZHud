@@ -41,6 +41,7 @@ local ezparty = {}
 ezparty.frames = {}
 ezparty.text = {}
 ezparty.bars = {}
+local hud_visible = true
 
 function ezparty.init(addon_settings)
     if not addon_settings then
@@ -52,14 +53,44 @@ function ezparty.init(addon_settings)
     ezparty.bars = ezparty_bars.create(addon_settings) or {}
     ezparty_select.create(addon_settings)
 
+    if not hud_visible then
+        ezparty.set_visible(false, true)
+    end
 end
 
 function ezparty.update()
+    if not hud_visible then
+        return
+    end
+
     if ezparty_text and ezparty_text.update then
         ezparty_text.update()
     end
     if ezparty_bars and ezparty_bars.update then
         ezparty_bars.update()
+    end
+end
+
+function ezparty.set_visible(visible, force)
+    visible = visible ~= false
+
+    if not force and hud_visible == visible then
+        return
+    end
+
+    hud_visible = visible
+
+    if ezparty_frames and ezparty_frames.set_visible then
+        ezparty_frames.set_visible(visible)
+    end
+    if ezparty_text and ezparty_text.set_visible then
+        ezparty_text.set_visible(visible)
+    end
+    if ezparty_bars and ezparty_bars.set_visible then
+        ezparty_bars.set_visible(visible)
+    end
+    if ezparty_select and ezparty_select.set_visible then
+        ezparty_select.set_visible(visible)
     end
 end
 

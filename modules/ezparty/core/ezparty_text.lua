@@ -27,6 +27,7 @@
 ]]
 
 local ezparty_text = {}
+local text_visible = true
 
 -- Libs
 local texts = require('texts')
@@ -697,7 +698,27 @@ function ezparty_text.get_text_entries()
     return text_entries
 end
 
+function ezparty_text.set_visible(visible)
+    visible = visible ~= false
+
+    if text_visible == visible then
+        return
+    end
+
+    text_visible = visible
+
+    if not text_visible then
+        hide_all_visible_text()
+    else
+        ezparty_text.update()
+    end
+end
+
 function ezparty_text.update()
+    if not text_visible then
+        return
+    end
+
     if not layout_state then
         return
     end

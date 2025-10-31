@@ -27,6 +27,7 @@
 ]]
 
 local ezparty_bars = {}
+local bars_visible = true
 
 -- Libs
 local images = require('images')
@@ -423,6 +424,10 @@ function ezparty_bars.create(addon_settings)
 end
 
 function ezparty_bars.update()
+    if not bars_visible then
+        return
+    end
+
     if not layout_state then
         return
     end
@@ -455,6 +460,28 @@ end
 function ezparty_bars.destroy()
     destroy_all_bars()
     layout_state = nil
+    bars_visible = true
+end
+
+function ezparty_bars.set_visible(visible)
+    visible = visible ~= false
+
+    if bars_visible == visible then
+        return
+    end
+
+    bars_visible = visible
+
+    if not bars_visible then
+        for _, entry in pairs(bar_entries.player) do
+            hide_bar_entry(entry)
+        end
+        for _, entry in pairs(bar_entries.members) do
+            hide_bar_entry(entry)
+        end
+    else
+        ezparty_bars.update()
+    end
 end
 
 return ezparty_bars

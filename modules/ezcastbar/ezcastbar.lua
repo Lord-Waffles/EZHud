@@ -122,6 +122,7 @@ local state = {
     addon_settings = nil,
     settings = nil,
     enabled = false,
+    suspended = false,
     frame = nil,
     bar = nil,
     label = nil,
@@ -598,6 +599,10 @@ local function finish_cast(is_success)
 end
 
 local function start_cast(spell_id, spell_name, duration)
+    if state.suspended then
+        return
+    end
+
     if not ensure_enabled() then
         return
     end
@@ -661,6 +666,10 @@ local function interrupt_cast()
 end
 
 local function on_action(act)
+    if state.suspended then
+        return
+    end
+
     if not state.player_id or not act then
         return
     end
@@ -703,6 +712,10 @@ local function on_action(act)
 end
 
 local function on_action_message(target_id, actor_id, message_id)
+    if state.suspended then
+        return
+    end
+
     if not state.player_id then
         return
     end
@@ -770,7 +783,29 @@ function ezcastbar.reload(addon_settings)
     ezcastbar.init(addon_settings or state.addon_settings)
 end
 
+function ezcastbar.set_visible(visible)
+    local show = visible ~= false
+    local suspend = not show
+
+    if state.suspended == suspend then
+        return
+    end
+
+    state.suspended = suspend
+
+    if suspend then
+        clear_cast()
+        hide_objects()
+    else
+        ensure_player_id()
+    end
+end
+
 function ezcastbar.update()
+    if state.suspended then
+        return
+    end
+
     if not state.current_cast or not ensure_enabled() then
         return
     end
@@ -827,10 +862,11 @@ function ezcastbar.destroy()
     unregister_events()
     clear_cast()
     destroy_objects()
+    state.suspended = false
 end
 
 function ezcastbar.show_test_bar(duration)
-    if not ensure_enabled() then
+    if state.suspended or not ensure_enabled() then
         return false
     end
 

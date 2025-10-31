@@ -40,6 +40,7 @@ local pointer_image
 local pointer_dimensions = { width = 0, height = 0 }
 local frame_positions = {}
 local pointer_visible = false
+local pointer_enabled = true
 local update_event_id
 local logout_event_id
 
@@ -253,7 +254,10 @@ local function resolve_target_slot()
 end
 
 local function update_pointer_position()
-    if not pointer_image then
+    if not pointer_image or not pointer_enabled then
+        if not pointer_enabled then
+            set_pointer_visibility(false)
+        end
         return
     end
 
@@ -313,6 +317,22 @@ function ezparty_select.create(addon_settings)
     end)
 
     update_pointer_position()
+end
+
+function ezparty_select.set_visible(visible)
+    visible = visible ~= false
+
+    if pointer_enabled == visible then
+        return
+    end
+
+    pointer_enabled = visible
+
+    if not pointer_enabled then
+        set_pointer_visibility(false)
+    else
+        update_pointer_position()
+    end
 end
 
 return ezparty_select

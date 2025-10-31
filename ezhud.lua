@@ -129,8 +129,62 @@ windower.register_event('addon command', function(command, ...)
     end
 end)
 
+local hud_state = {
+    visible = nil,
+}
+
+local function should_show_ui()
+    local info = windower.ffxi.get_info()
+    if not info or not info.logged_in then
+        return false
+    end
+
+    local player = windower.ffxi.get_player()
+    if not player then
+        return false
+    end
+
+    if player.status == 4 then
+        return false
+    end
+
+    local party = windower.ffxi.get_party()
+    if not party then
+        return false
+    end
+
+    local self_entry = party.p0 or party[0]
+    if not self_entry or self_entry.hpp == nil then
+        return false
+    end
+
+    return true
+end
+
+local function update_ui_visibility()
+    local should_show = should_show_ui()
+
+    if should_show ~= hud_state.visible then
+        hud_state.visible = should_show
+
+        if ezparty.set_visible then
+            ezparty.set_visible(should_show)
+        end
+        if ezmount.set_visible then
+            ezmount.set_visible(should_show)
+        end
+        if ezcastbar.set_visible then
+            ezcastbar.set_visible(should_show)
+        end
+    end
+
+    return hud_state.visible
+end
+
 -- Prerender loop
 windower.register_event('prerender', function()
-    ezparty.update()
-    ezcastbar.update()
+    if update_ui_visibility() then
+        ezparty.update()
+        ezcastbar.update()
+    end
 end)
