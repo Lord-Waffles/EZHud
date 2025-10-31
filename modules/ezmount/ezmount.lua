@@ -40,6 +40,15 @@ local PRESSED_TEXTURE = 'gui/ezparty/ezmount_click.png'
 local TEXTURE_WIDTH = 128
 local TEXTURE_HEIGHT = 150
 
+local MOUNT_BUFF_IDS = {
+    252, -- Mounted
+}
+
+local MOUNT_BUFF_LOOKUP = {}
+for _, buff_id in ipairs(MOUNT_BUFF_IDS) do
+    MOUNT_BUFF_LOOKUP[buff_id] = true
+end
+
 local buttons = {
     player_one = {},
     player_two = {},
@@ -270,6 +279,36 @@ local function ensure_button_objects(button)
     button.pressed:hide()
 end
 
+local function resolve_frame_scale(frame_info)
+    if not frame_info then
+        return 1
+    end
+
+    local scale = tonumber(frame_info.scale) or 0
+
+    if scale <= 0 then
+        local base_width = tonumber(frame_info.base_width) or 0
+        local width = tonumber(frame_info.width) or 0
+        if base_width > 0 and width > 0 then
+            scale = width / base_width
+        end
+    end
+
+    if scale <= 0 then
+        local base_height = tonumber(frame_info.base_height) or 0
+        local height = tonumber(frame_info.height) or 0
+        if base_height > 0 and height > 0 then
+            scale = height / base_height
+        end
+    end
+
+    if scale <= 0 then
+        scale = 1
+    end
+
+    return scale
+end
+
 local function apply_geometry(button, frame_info)
     if not button or not frame_info then
         return
@@ -277,53 +316,19 @@ local function apply_geometry(button, frame_info)
 
     ensure_button_objects(button)
 
-    local frame_height = math.max(frame_info.height or 0, 1)
-    local frame_width = math.max(frame_info.width or 0, 1)
-    local base_height = math.max(frame_info.base_height or 0, 0)
+    local scale = resolve_frame_scale(frame_info)
     local base_width = math.max(frame_info.base_width or 0, 0)
+    local base_height = math.max(frame_info.base_height or 0, 0)
 
-    -- Derive overlay scaling from the active frame geometry so hover/press states track resolution changes.
-    local scale_factor = tonumber(frame_info.scale) or 0
-    local width_scale = 0
-    local height_scale = 0
-
-    if base_width > 0 then
-        width_scale = frame_width / base_width
+    if base_width <= 0 then
+        base_width = TEXTURE_WIDTH
     end
-    if base_height > 0 then
-        height_scale = frame_height / base_height
+    if base_height <= 0 then
+        base_height = TEXTURE_HEIGHT
     end
 
-    if width_scale <= 0 and scale_factor > 0 then
-        width_scale = scale_factor
-    end
-    if height_scale <= 0 and scale_factor > 0 then
-        height_scale = scale_factor
-    end
-
-    if width_scale <= 0 and frame_width > 0 then
-        width_scale = frame_width / TEXTURE_WIDTH
-    end
-    if height_scale <= 0 and frame_height > 0 then
-        height_scale = frame_height / TEXTURE_HEIGHT
-    end
-
-    if width_scale <= 0 then
-        width_scale = height_scale > 0 and height_scale or 1
-    end
-    if height_scale <= 0 then
-        height_scale = width_scale
-    end
-
-    local button_width = math.max(math.floor(TEXTURE_WIDTH * width_scale + 0.5), 1)
-    local button_height = math.max(math.floor(TEXTURE_HEIGHT * height_scale + 0.5), 1)
-
-    if frame_width > 0 then
-        button_width = math.min(button_width, frame_width)
-    end
-    if frame_height > 0 then
-        button_height = math.min(button_height, frame_height)
-    end
+    local button_width = math.max(math.floor(base_width * scale + 0.5), 1)
+    local button_height = math.max(math.floor(base_height * scale + 0.5), 1)
 
     local button_x = math.floor((frame_info.x or 0) + 0.5)
     local button_y = math.floor((frame_info.y or 0) + 0.5)
@@ -352,6 +357,23 @@ local function point_in_area(x, y, area)
     end
 
     return x >= area.x and x <= area.x + area.width and y >= area.y and y <= area.y + area.height
+end
+
+local function is_player_mounted()
+    local player = windower.ffxi.get_player()
+    local buffs = player and player.buffs or nil
+
+    if not buffs then
+        return false
+    end
+
+    for _, buff_id in ipairs(buffs) do
+        if MOUNT_BUFF_LOOKUP[buff_id] then
+            return true
+        end
+    end
+
+    return false
 end
 
 local function set_hover(button)
@@ -383,6 +405,11 @@ local function trigger_mount()
     end
 
     local mount_name = addon_config.ezmount.name
+    if is_player_mounted() then
+        windower.send_command('input /dismount')
+        return
+    end
+
     if not mount_name or mount_name == '' then
         return
     end
